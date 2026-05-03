@@ -35,6 +35,7 @@ It exposes read-only enrichment tools for:
 - Aggregate domain reputation fact packs
 - Aggregate URL reputation fact packs
 - Aggregate file hash reputation fact packs
+- local enrichment provider status checks
 
 `investigatinator-knowledge` exposes local-only defensive knowledge tools for:
 
@@ -56,6 +57,7 @@ It exposes read-only enrichment tools for:
 `investigatinator-research` exposes live-network public research tools for:
 
 - curated security feed search
+- configured research feed status checks
 - public article metadata and snippet extraction
 - public article IOC extraction
 - public article research briefs with suggested pivots

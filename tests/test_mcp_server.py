@@ -7,6 +7,7 @@ def test_mcp_server_registers_expected_tools() -> None:
     tools = anyio.run(mcp.list_tools)
 
     assert [tool.name for tool in tools] == [
+        "enrichment_status",
         "dns_lookup",
         "rdap_lookup",
         "whois_lookup",

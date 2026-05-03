@@ -14,6 +14,7 @@ from investigatinator.config import (
     get_research_feeds,
     get_research_user_agent,
     get_timeout_seconds,
+    research_feeds_source,
 )
 from investigatinator.enrichment.models import (
     InputValidationError,
@@ -23,6 +24,7 @@ from investigatinator.enrichment.models import (
 from investigatinator.research.url_validation import normalize_public_http_url
 
 TOOL_NAME = "research_feed_search"
+STATUS_TOOL_NAME = "research_feed_status"
 MAX_LIMIT = 25
 MAX_DAYS = 365
 
@@ -117,7 +119,29 @@ def research_feed_search(query: str = "", limit: int = 10, days: int = 14) -> di
             "source_error_count": len(source_errors),
             "source_errors": source_errors,
             "result_count": min(len(matched_entries), limit),
+            "interpretation": _search_interpretation(
+                len(matched_entries),
+                normalized_query,
+                days,
+            ),
             "entries": [_entry_data(entry, normalized_query) for entry in matched_entries[:limit]],
+        },
+    )
+
+
+def research_feed_status() -> dict[str, Any]:
+    """Return configured research feeds without fetching them."""
+    feed_urls = get_research_feeds()
+    return success_response(
+        STATUS_TOOL_NAME,
+        {},
+        {
+            "local_only": True,
+            "network_checked": False,
+            "live_network": False,
+            "configured_feeds": feed_urls,
+            "feed_count": len(feed_urls),
+            "configuration_source": research_feeds_source(),
         },
     )
 
@@ -158,6 +182,20 @@ def _fetch_feed(feed_url: str) -> dict[str, Any]:
         }
 
     return {"ok": True, "entries": _parse_feed(root, feed_url)}
+
+
+def _search_interpretation(match_count: int, query: str, days: int) -> str:
+    if match_count:
+        return "Matching entries were found in the configured feeds for this query window."
+    if query:
+        return (
+            "No matching entries were found in the configured feeds for this query and "
+            f"{days}-day window. This does not prove the topic is absent publicly."
+        )
+    return (
+        "No recent entries were found in the configured feeds for this query window. "
+        "This does not prove the sources are inactive or that public reporting is absent."
+    )
 
 
 def _parse_feed(root: ElementTree.Element, feed_url: str) -> list[FeedEntry]:

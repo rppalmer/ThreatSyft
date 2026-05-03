@@ -79,6 +79,7 @@ The enrichment MCP server is defined in `src/investigatinator/mcp/enrichment_ser
 
 It exposes focused read-only tools:
 
+- `enrichment_status()`
 - `dns_lookup(domain: str)`
 - `rdap_lookup(target: str)`
 - `whois_lookup(target: str)`
@@ -122,6 +123,7 @@ The research MCP server is defined in `src/investigatinator/mcp/research_server.
 It exposes public threat-report research tools:
 
 - `research_feed_search(query: str = "", limit: int = 10, days: int = 14)`
+- `research_feed_status()`
 - `research_article_summary(url: str)`
 - `research_article_iocs(url: str)`
 - `research_brief(url: str)`
@@ -145,6 +147,12 @@ For repository-local development, VS Code also includes `.vscode/mcp.json` entri
 The MCP layers are deliberately thin. They register tools and pass requests to core modules. Enrichment logic lives under `src/investigatinator/enrichment/`, knowledge logic lives under `src/investigatinator/knowledge/`, and public research logic lives under `src/investigatinator/research/`.
 
 ## Tool Overview
+
+### `enrichment_status()`
+
+Checks local enrichment provider configuration without calling external providers.
+
+Returned data includes provider tool names, API-key presence booleans, aggregate fact-pack requirements, and `secret_values_returned: false`.
 
 ### `dns_lookup(domain: str)`
 
@@ -501,13 +509,19 @@ Returned data includes compact ranked matches with entry name, categories, ATT&C
 
 Checks local knowledge snapshot availability without calling external providers.
 
-Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for `cve_lookup`. It does not print secret values.
+Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for `cve_lookup`. It does not print secret values and does not report RSS feeds, news sources, or research feed configuration.
 
 ### `research_feed_search(query: str = "", limit: int = 10, days: int = 14)`
 
 Searches configured public security RSS feeds using live network calls.
 
-Returned data includes matching feed entries, source URLs, published timestamps when available, short matched context, and per-feed errors when one source fails but another succeeds.
+Returned data includes matching feed entries, source URLs, published timestamps when available, short matched context, cautious zero-result interpretation, and per-feed errors when one source fails but another succeeds.
+
+### `research_feed_status()`
+
+Lists configured research RSS or Atom feed URLs without fetching them.
+
+Returned data includes configured feed URLs, feed count, configuration source, and `live_network: false`.
 
 ### `research_article_summary(url: str)`
 
@@ -588,7 +602,7 @@ The current version supports these environment variables:
 - `INVESTIGATINATOR_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
 - `INVESTIGATINATOR_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.investigatinator/knowledge/lolbas/lolbas.json`.
 - `INVESTIGATINATOR_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
-- `INVESTIGATINATOR_RESEARCH_FEEDS`: comma-separated public RSS feed URLs for `research_feed_search`. Defaults to BleepingComputer News and Google Cloud Threat Intelligence.
+- `INVESTIGATINATOR_RESEARCH_FEEDS`: comma- or newline-separated public RSS/Atom feed URLs for `research_feed_search`. Defaults to BleepingComputer News and Google Cloud Threat Intelligence.
 - `INVESTIGATINATOR_RESEARCH_USER_AGENT`: user agent used by research HTTP requests. Defaults to `Investigatinator/1.0`.
 - `ABUSEIPDB_API_KEY`: API key for `abuseipdb_check_ip`.
 - `GREYNOISE_API_KEY`: API key for `greynoise_ip_context`.
@@ -601,6 +615,19 @@ The current version supports these environment variables:
 - `NVD_API_KEY`: optional API key for `cve_lookup`.
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
+
+For easier feed editing, use a quoted multiline value:
+
+```env
+INVESTIGATINATOR_RESEARCH_FEEDS="
+https://feeds.feedburner.com/TheHackersNews
+https://www.recordedfuture.com/category/cyber/feed/
+https://www.anomali.com/site/blog-rss
+https://www.cisecurity.org/feed/advisories
+https://www.cisa.gov/automated-https:indicator-sharing-ais
+https://isc.sans.edu/rssfeed_full.xml
+"
+```
 
 ## Host Compatibility
 

@@ -162,3 +162,48 @@ def test_research_feed_search_ignores_malformed_items(monkeypatch) -> None:
 
     assert result["ok"] is True
     assert result["data"]["entries"] == []
+
+
+def test_research_feed_search_zero_results_has_cautious_interpretation(monkeypatch) -> None:
+    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+
+    def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
+        return httpx.Response(200, request=httpx.Request("GET", url), text=RSS_FIXTURE)
+
+    monkeypatch.setattr(feeds.httpx, "get", fake_get)
+
+    result = feeds.research_feed_search("copyfail", limit=10, days=365)
+
+    assert result["ok"] is True
+    assert result["data"]["result_count"] == 0
+    assert "No matching entries were found" in result["data"]["interpretation"]
+    assert "does not prove" in result["data"]["interpretation"]
+
+
+def test_research_feed_status_reports_defaults(monkeypatch) -> None:
+    monkeypatch.delenv("INVESTIGATINATOR_RESEARCH_FEEDS", raising=False)
+
+    result = feeds.research_feed_status()
+
+    assert result["ok"] is True
+    assert result["data"]["local_only"] is True
+    assert result["data"]["network_checked"] is False
+    assert result["data"]["configuration_source"] == "default"
+    assert result["data"]["feed_count"] == 2
+
+
+def test_research_feed_status_reports_environment_override(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "INVESTIGATINATOR_RESEARCH_FEEDS",
+        "https://example.com/rss.xml\nhttps://example.org/feed",
+    )
+
+    result = feeds.research_feed_status()
+
+    assert result["ok"] is True
+    assert result["data"]["configuration_source"] == "environment"
+    assert result["data"]["configured_feeds"] == [
+        "https://example.com/rss.xml",
+        "https://example.org/feed",
+    ]
+    assert result["data"]["feed_count"] == 2

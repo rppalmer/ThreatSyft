@@ -28,8 +28,12 @@ from investigatinator.knowledge.status import knowledge_status as run_knowledge_
 mcp = FastMCP(
     "Investigatinator Knowledge",
     instructions=(
-        "Defensive security knowledge tools. Tools are read-only and return structured JSON. "
-        "Most runtime lookups are local-only; cve_lookup uses the live NVD CVE API."
+        "Defensive security knowledge tools for stable references and vulnerability context. "
+        "Use this server for ATT&CK techniques and tactics, D3FEND defensive mappings, "
+        "CISA KEV, LOLBAS, targeted CVE metadata, and compact defensive briefs. Most "
+        "runtime lookups are local-only; cve_lookup uses the live NVD CVE API. Do not "
+        "use knowledge_status for RSS feeds, news sources, or public research feed "
+        "configuration; use the research server for current public reporting."
     ),
 )
 
@@ -78,19 +82,19 @@ def technique_brief(technique_id: str) -> dict[str, Any]:
 
 @mcp.tool()
 def cve_lookup(cve_id: str) -> dict[str, Any]:
-    """Look up one CVE using the NVD CVE API."""
+    """Look up official metadata for one CVE using the live NVD CVE API."""
     return run_cve_lookup(cve_id)
 
 
 @mcp.tool()
 def vulnerability_brief(cve_id: str) -> dict[str, Any]:
-    """Build a compact vulnerability knowledge bundle for one CVE."""
+    """Build a compact CVE bundle from NVD and local KEV knowledge sources."""
     return run_vulnerability_brief(cve_id)
 
 
 @mcp.tool()
 def kev_lookup(cve_id: str) -> dict[str, Any]:
-    """Look up one CVE in the local CISA KEV catalog."""
+    """Check whether one CVE appears in the local CISA KEV catalog."""
     return run_kev_lookup(cve_id)
 
 
@@ -114,7 +118,7 @@ def lolbas_search(query: str, limit: int = 10) -> dict[str, Any]:
 
 @mcp.tool()
 def knowledge_status() -> dict[str, Any]:
-    """Check local knowledge snapshot status without calling external providers."""
+    """Check ATT&CK, D3FEND, KEV, LOLBAS, and NVD readiness; not RSS feeds."""
     return run_knowledge_status()
 
 

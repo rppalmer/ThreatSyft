@@ -26,6 +26,7 @@ from investigatinator.enrichment.securitytrails import (
     securitytrails_domain_lookup as run_securitytrails_domain_lookup,
 )
 from investigatinator.enrichment.shodan import shodan_host_lookup as run_shodan_host_lookup
+from investigatinator.enrichment.status import enrichment_status as run_enrichment_status
 from investigatinator.enrichment.url_reputation import url_reputation as run_url_reputation
 from investigatinator.enrichment.virustotal import (
     virustotal_domain_report as run_virustotal_domain_report,
@@ -44,10 +45,20 @@ from investigatinator.enrichment.whois import whois_lookup as run_whois_lookup
 mcp = FastMCP(
     "Investigatinator Enrichment",
     instructions=(
-        "Focused security enrichment tools for DNS, RDAP, WHOIS, IP geolocation, "
-        "and threat intelligence. All tools are read-only and return structured JSON."
+        "Focused read-only indicator enrichment tools. Use this server for IPs, domains, "
+        "URLs, file hashes, DNS, RDAP, WHOIS, geolocation, provider reputation, and "
+        "aggregate reputation fact packs. Provider-specific tools return one vendor's "
+        "view; ip_reputation, domain_reputation, url_reputation, and file_reputation "
+        "combine multiple providers. Use enrichment_status to check configured providers "
+        "without exposing secrets or calling external APIs."
     ),
 )
+
+
+@mcp.tool()
+def enrichment_status() -> dict[str, Any]:
+    """Check local enrichment provider configuration without network calls or secret values."""
+    return run_enrichment_status()
 
 
 @mcp.tool()
@@ -70,37 +81,37 @@ def whois_lookup(target: str) -> dict[str, Any]:
 
 @mcp.tool()
 def abuseipdb_check_ip(ip: str, max_age_days: int = 90) -> dict[str, Any]:
-    """Check AbuseIPDB reputation for an IP address."""
+    """Check AbuseIPDB's provider-specific reputation for an IP address."""
     return run_abuseipdb_check_ip(ip, max_age_days)
 
 
 @mcp.tool()
 def greynoise_ip_context(ip: str) -> dict[str, Any]:
-    """Look up GreyNoise Community context for an IP address."""
+    """Look up GreyNoise's provider-specific internet scanner context for an IP address."""
     return run_greynoise_ip_context(ip)
 
 
 @mcp.tool()
 def virustotal_ip_report(ip: str) -> dict[str, Any]:
-    """Fetch a compact VirusTotal report for an IP address."""
+    """Fetch VirusTotal's provider-specific report for an IP address."""
     return run_virustotal_ip_report(ip)
 
 
 @mcp.tool()
 def virustotal_domain_report(domain: str) -> dict[str, Any]:
-    """Fetch a compact VirusTotal report for a domain."""
+    """Fetch VirusTotal's provider-specific report for a domain."""
     return run_virustotal_domain_report(domain)
 
 
 @mcp.tool()
 def virustotal_url_report(url: str) -> dict[str, Any]:
-    """Fetch a compact VirusTotal report for a URL."""
+    """Fetch VirusTotal's provider-specific report for a URL."""
     return run_virustotal_url_report(url)
 
 
 @mcp.tool()
 def virustotal_file_report(file_hash: str) -> dict[str, Any]:
-    """Fetch a compact VirusTotal report for a file hash."""
+    """Fetch VirusTotal's provider-specific report for a file hash."""
     return run_virustotal_file_report(file_hash)
 
 
@@ -136,25 +147,25 @@ def google_safebrowsing_check_url(url: str) -> dict[str, Any]:
 
 @mcp.tool()
 def ip_reputation(ip: str) -> dict[str, Any]:
-    """Build a deterministic IP reputation fact pack from provider results."""
+    """Build an aggregate IP reputation fact pack from multiple provider results."""
     return run_ip_reputation(ip)
 
 
 @mcp.tool()
 def domain_reputation(domain: str) -> dict[str, Any]:
-    """Build a deterministic domain reputation fact pack from provider results."""
+    """Build an aggregate domain reputation fact pack from multiple provider results."""
     return run_domain_reputation(domain)
 
 
 @mcp.tool()
 def url_reputation(url: str) -> dict[str, Any]:
-    """Build a deterministic URL reputation fact pack from provider results."""
+    """Build an aggregate URL reputation fact pack from multiple provider results."""
     return run_url_reputation(url)
 
 
 @mcp.tool()
 def file_reputation(file_hash: str) -> dict[str, Any]:
-    """Build a deterministic file hash reputation fact pack from provider results."""
+    """Build an aggregate file hash reputation fact pack from multiple provider results."""
     return run_file_reputation(file_hash)
 
 

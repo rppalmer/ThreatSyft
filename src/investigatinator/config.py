@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -195,7 +196,14 @@ def get_google_safebrowsing_base_url() -> str:
 def get_research_feeds() -> list[str]:
     """Return configured research RSS feed URLs."""
     raw_value = os.getenv("INVESTIGATINATOR_RESEARCH_FEEDS", DEFAULT_RESEARCH_FEEDS)
-    return [item.strip() for item in raw_value.split(",") if item.strip()]
+    return _split_research_feeds(raw_value)
+
+
+def research_feeds_source() -> str:
+    """Return whether research feeds came from the environment or defaults."""
+    if os.getenv("INVESTIGATINATOR_RESEARCH_FEEDS") is None:
+        return "default"
+    return "environment"
 
 
 def get_research_user_agent() -> str:
@@ -214,3 +222,8 @@ def _knowledge_path(env_name: str, *relative_parts: str) -> Path:
     if raw_value:
         return Path(raw_value)
     return Path.home().joinpath(".investigatinator", "knowledge", *relative_parts)
+
+
+def _split_research_feeds(raw_value: str) -> list[str]:
+    """Split comma- or newline-separated feed URLs."""
+    return [item.strip() for item in re.split(r"[,\r\n]+", raw_value) if item.strip()]

@@ -166,11 +166,19 @@ convenience around the same server modules.
 After your host discovers the servers, ask the agent to use tools like:
 
 ```text
+Use Investigatinator enrichment_status and tell me which enrichment providers are configured. Do not print secret values.
+```
+
+```text
 Use Investigatinator domain_reputation on example.com and summarize the key signals.
 ```
 
 ```text
 Use Investigatinator ip_reputation on 8.8.8.8. Tell me which providers returned results and which failed.
+```
+
+```text
+Use Investigatinator research_feed_status and tell me which RSS feeds are configured.
 ```
 
 ```text
@@ -295,7 +303,7 @@ If LOLBAS tools return `not_found` with a missing snapshot path, run:
 investigatinator knowledge-update lolbas
 ```
 
-Use `knowledge_status` from the MCP server or `main.py knowledge-status` from the CLI when you want a local-only readiness check for ATT&CK, D3FEND, KEV, and LOLBAS snapshots. It includes local file modified timestamps for each snapshot and source update timestamps when the source data exposes them.
+Use `knowledge_status` from the MCP server or `main.py knowledge-status` from the CLI when you want a local-only readiness check for ATT&CK, D3FEND, KEV, and LOLBAS snapshots. It includes local file modified timestamps for each snapshot and source update timestamps when the source data exposes them. It does not report RSS feeds or research source configuration; use `research_feed_status` for that.
 
 If VS Code does not show the MCP tools, restart the MCP servers from the Command
 Palette and confirm `.vscode/mcp.json` points to
