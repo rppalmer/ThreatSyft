@@ -1,0 +1,34 @@
+{
+  "title": "CISA Known Exploited Vulnerabilities Catalog",
+  "catalogVersion": "2026.04.13",
+  "dateReleased": "2026-04-13T00:00:00.0000Z",
+  "count": 2,
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2023-34362",
+      "vendorProject": "Progress",
+      "product": "MOVEit Transfer",
+      "vulnerabilityName": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "dateAdded": "2023-06-02",
+      "shortDescription": "Progress MOVEit Transfer contains a SQL injection vulnerability.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2023-06-23",
+      "knownRansomwareCampaignUse": "Known",
+      "notes": "Fixture entry for search and lookup tests.",
+      "cwes": ["CWE-89"]
+    },
+    {
+      "cveID": "CVE-2024-3400",
+      "vendorProject": "Palo Alto Networks",
+      "product": "PAN-OS",
+      "vulnerabilityName": "Palo Alto Networks PAN-OS Command Injection Vulnerability",
+      "dateAdded": "2024-04-12",
+      "shortDescription": "PAN-OS contains a command injection vulnerability.",
+      "requiredAction": "Apply mitigations or updates per vendor instructions.",
+      "dueDate": "2024-04-19",
+      "knownRansomwareCampaignUse": "Unknown",
+      "notes": "Fixture entry for vendor matching.",
+      "cwes": ["CWE-77"]
+    }
+  ]
+}

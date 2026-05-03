@@ -1,0 +1,8 @@
+certifi
+mcp[cli]
+dnspython
+httpx
+ipwhois
+pydantic
+python-dotenv
+python-whois

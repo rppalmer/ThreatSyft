@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "investigatinator"
+version = "0.1.0"
+description = "Console-first Python security sidekick with focused MCP servers."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "certifi",
+    "mcp[cli]",
+    "dnspython",
+    "httpx",
+    "ipwhois",
+    "pydantic",
+    "python-dotenv",
+    "python-whois",
+]
+
+[project.scripts]
+investigatinator = "investigatinator.cli:main"
+investigatinator-enrichment-mcp = "investigatinator.mcp.enrichment_server:main"
+investigatinator-knowledge-mcp = "investigatinator.mcp.knowledge_server:main"
+investigatinator-research-mcp = "investigatinator.mcp.research_server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

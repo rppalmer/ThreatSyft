@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "investigatinator-enrichment": {
+      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+    },
+    "investigatinator-knowledge": {
+      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+    },
+    "investigatinator-research": {
+      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+    }
+  }
+}

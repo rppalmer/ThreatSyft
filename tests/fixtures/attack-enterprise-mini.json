@@ -1,0 +1,153 @@
+{
+  "type": "bundle",
+  "id": "bundle--test",
+  "objects": [
+    {
+      "type": "x-mitre-tactic",
+      "id": "x-mitre-tactic--initial-access",
+      "name": "Initial Access",
+      "description": "The adversary is trying to get into your network.",
+      "x_mitre_shortname": "initial-access",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "TA0001",
+          "url": "https://attack.mitre.org/tactics/TA0001/"
+        }
+      ]
+    },
+    {
+      "type": "x-mitre-tactic",
+      "id": "x-mitre-tactic--execution",
+      "name": "Execution",
+      "description": "The adversary is trying to run malicious code.",
+      "x_mitre_shortname": "execution",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "TA0002",
+          "url": "https://attack.mitre.org/tactics/TA0002/"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--drive-by",
+      "name": "Drive-by Compromise",
+      "description": "Adversaries may gain access through a user visiting a website.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "initial-access"
+        }
+      ],
+      "x_mitre_platforms": ["Windows", "macOS", "Linux"],
+      "x_mitre_data_sources": ["Network Traffic: Network Traffic Content"],
+      "x_mitre_detection": "Monitor web proxy and network traffic for suspicious redirects.",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1189",
+          "url": "https://attack.mitre.org/techniques/T1189/"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--command",
+      "name": "Command and Scripting Interpreter",
+      "description": "Adversaries may abuse command and script interpreters to execute commands.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "execution"
+        }
+      ],
+      "x_mitre_platforms": ["Windows", "macOS", "Linux"],
+      "x_mitre_data_sources": ["Process: Process Creation", "Command: Command Execution"],
+      "x_mitre_detection": "Monitor process creation and command-line arguments.",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1059",
+          "url": "https://attack.mitre.org/techniques/T1059/"
+        },
+        {
+          "source_name": "Example Report",
+          "url": "https://example.com/report"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--powershell",
+      "name": "PowerShell",
+      "description": "Adversaries may abuse PowerShell commands and scripts.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "execution"
+        }
+      ],
+      "x_mitre_platforms": ["Windows"],
+      "x_mitre_data_sources": ["Process: Process Creation", "Script: Script Execution"],
+      "x_mitre_detection": "Monitor PowerShell script block logging and encoded commands.",
+      "x_mitre_is_subtechnique": true,
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1059.001",
+          "url": "https://attack.mitre.org/techniques/T1059/001/"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--deprecated",
+      "name": "Deprecated Test Technique",
+      "description": "This fixture object verifies deprecated flag handling.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "execution"
+        }
+      ],
+      "x_mitre_platforms": ["Windows"],
+      "x_mitre_deprecated": true,
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T9999",
+          "url": "https://attack.mitre.org/techniques/T9999/"
+        }
+      ]
+    },
+    {
+      "type": "course-of-action",
+      "id": "course-of-action--execution-prevention",
+      "name": "Execution Prevention",
+      "description": "Block execution of scripts or binaries from untrusted paths.",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "M1038",
+          "url": "https://attack.mitre.org/mitigations/M1038/"
+        }
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--subtechnique",
+      "relationship_type": "subtechnique-of",
+      "source_ref": "attack-pattern--powershell",
+      "target_ref": "attack-pattern--command"
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--mitigates",
+      "relationship_type": "mitigates",
+      "source_ref": "course-of-action--execution-prevention",
+      "target_ref": "attack-pattern--command"
+    }
+  ]
+}

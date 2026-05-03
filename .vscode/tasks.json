@@ -1,0 +1,126 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Install/update dependencies",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                "requirements-dev.txt"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Ruff: check",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/ruff",
+            "args": [
+                "check",
+                "."
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Ruff: format check",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/ruff",
+            "args": [
+                "format",
+                "--check",
+                "."
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Pytest",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "pytest"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: CLI domain example.com",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--compact",
+                "domain",
+                "example.com"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: CLI help",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--help"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: CLI doctor",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--compact",
+                "doctor"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: CLI tools",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--compact",
+                "tools"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: CLI smoke safe samples",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--compact",
+                "smoke"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: Knowledge status",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "--compact",
+                "knowledge-status"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Investigatinator: Knowledge update all",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "main.py",
+                "knowledge-update",
+                "all"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

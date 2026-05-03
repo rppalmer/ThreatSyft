@@ -1,0 +1,58 @@
+{
+    "servers": {
+        "investigatinator-enrichment": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-m",
+                "investigatinator.mcp.enrichment_server"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "dev": {
+                "watch": "src/**/*.py",
+                "debug": {
+                    "type": "debugpy"
+                }
+            }
+        },
+        "investigatinator-knowledge": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-m",
+                "investigatinator.mcp.knowledge_server"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "dev": {
+                "watch": "src/**/*.py",
+                "debug": {
+                    "type": "debugpy"
+                }
+            }
+        },
+        "investigatinator-research": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-m",
+                "investigatinator.mcp.research_server"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "dev": {
+                "watch": "src/**/*.py",
+                "debug": {
+                    "type": "debugpy"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "servers": {
+    "investigatinator-enrichment": {
+      "type": "stdio",
+      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+    },
+    "investigatinator-knowledge": {
+      "type": "stdio",
+      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+    },
+    "investigatinator-research": {
+      "type": "stdio",
+      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+    }
+  }
+}

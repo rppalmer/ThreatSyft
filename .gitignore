@@ -1,0 +1,14 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+data/knowledge/attack/enterprise-attack.json
+data/knowledge/cisa/known_exploited_vulnerabilities.json
+data/knowledge/d3fend/d3fend.json
+data/knowledge/lolbas/lolbas.json
