@@ -729,8 +729,6 @@ Run the console helper:
 .venv/bin/python main.py domain example.com
 ```
 
-For more examples, see `docs/usage.md`.
-
 Download or refresh the local MITRE ATT&CK Enterprise snapshot:
 
 ```bash
@@ -816,6 +814,48 @@ Run live smoke checks against safe sample indicators. This uses provider calls a
 
 A successful result exits with code `0`. A failed lookup or invalid input exits with code `1` while still printing a structured JSON error.
 
+Safe benign sample indicators for smoke testing: IP `8.8.8.8`, domain `example.com`, URL `https://example.com/`, MD5 `d41d8cd98f00b204e9800998ecf8427e`. Provider verdicts can disagree; treat aggregate results as evidence bundles for the agent, not final truth.
+
+## VS Code Tasks
+
+The repository ships convenience tasks that wrap `main.py`. Open the Command Palette, run `Tasks: Run Task`, and choose one of:
+
+- `ThreatSyft: CLI domain example.com`
+- `ThreatSyft: CLI help`
+- `ThreatSyft: CLI doctor`
+- `ThreatSyft: CLI tools`
+- `ThreatSyft: CLI smoke safe samples`
+- `ThreatSyft: Knowledge status`
+- `ThreatSyft: Knowledge update all`
+
+## Example Agent Prompts
+
+Once your MCP host has discovered the servers, drive them from the agent with prompts like:
+
+- `Use ThreatSyft enrichment_status and tell me which providers are configured. Do not print secret values.`
+- `Use ThreatSyft ip_reputation on 8.8.8.8. Tell me which providers returned results and which failed.`
+- `Use ThreatSyft domain_reputation on example.com and summarize the key signals.`
+- `Use ThreatSyft url_reputation on https://example.com/ and explain any provider disagreement.`
+- `Use ThreatSyft virustotal_file_report on d41d8cd98f00b204e9800998ecf8427e.`
+- `Use ThreatSyft attack_technique_lookup on T1059 and explain the defensive context.`
+- `Use ThreatSyft technique_brief on T1059 and summarize the key defensive context.`
+- `Use ThreatSyft vulnerability_brief on CVE-2024-3400 and summarize the NVD and KEV evidence.`
+- `Use ThreatSyft kev_search for MOVEit with a limit of 5.`
+- `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
+- `Use ThreatSyft research_feed_search for ransomware with a limit of 5.`
+- `Use ThreatSyft research_brief on https://example.com/report. Summarize the returned fact pack and do not call the research tools again for that same URL unless I ask you to refresh it.`
+
+Use provider-specific tools when you need raw provider detail or want to isolate one data source. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use the research tools for recent public reporting context or IOC extraction from a known article URL.
+
+## Troubleshooting
+
+- `missing_api_key`: the expected variable is absent. Check `.env`, or run `.venv/bin/python main.py --compact doctor` for a local-only key-presence check that does not print secrets.
+- `authentication_error`: the key exists but the provider rejected it.
+- `rate_limited`: wait, or use a different provider-specific tool. `cve_lookup` uses the live NVD API — set `NVD_API_KEY` in `.env` or retry later.
+- Slow RDAP or WHOIS: keep `THREATSYFT_TIMEOUT_SECONDS` at `15`, or temporarily raise it in `.env`.
+- `not_found` with a missing snapshot path from an ATT&CK, D3FEND, KEV, or LOLBAS tool: run the matching `threatsyft knowledge-update <source>` (or `all`) once, then retry. Use `knowledge-status` for a local-only readiness check.
+- MCP tools not showing in VS Code: restart the MCP servers from the Command Palette and confirm `.vscode/mcp.json` points to `${workspaceFolder}/.venv/bin/python`. For LM Studio or Cursor, confirm the configured command path runs from a terminal.
+
 ## Design Principles
 
 ThreatSyft favors:
@@ -833,7 +873,5 @@ It does not expose generic command execution, file modification tools, or broad 
 
 For durable design context, see:
 
-- `ARCHITECTURE.md` for MCP server boundaries and long-term architecture.
+- `ARCHITECTURE.md` for MCP server boundaries, long-term architecture, and roadmap.
 - `AGENTS.md` for standing instructions to future coding agents.
-- `docs/usage.md` for CLI and MCP usage examples.
-- `docs/plans/threat-intel-mcp-expansion.md` for the next API-backed enrichment roadmap.

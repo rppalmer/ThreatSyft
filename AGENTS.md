@@ -4,8 +4,7 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 
 ## Read First
 
-- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture.
-- Read `docs/plans/threat-intel-mcp-expansion.md` before adding API-backed threat intelligence providers or reputation tools.
+- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture (including the API-backed provider and research roadmap).
 - Use `README.md` for the current user-facing overview and development commands.
 
 ## Standing Rules
