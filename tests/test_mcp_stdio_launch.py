@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 
 SERVER_MODULES = [
-    "investigatinator.mcp.enrichment_server",
-    "investigatinator.mcp.knowledge_server",
-    "investigatinator.mcp.research_server",
+    "threatsyft.mcp.enrichment_server",
+    "threatsyft.mcp.knowledge_server",
+    "threatsyft.mcp.research_server",
 ]
 
 

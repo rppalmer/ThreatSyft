@@ -1,5 +1,5 @@
-from investigatinator import cli
-from investigatinator.tool_catalog import catalog
+from threatsyft import cli
+from threatsyft.tool_catalog import catalog
 
 
 def test_cli_domain_compact_success(monkeypatch, capsys) -> None:

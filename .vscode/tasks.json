@@ -46,7 +46,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: CLI domain example.com",
+            "label": "ThreatSyft: CLI domain example.com",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -58,7 +58,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: CLI help",
+            "label": "ThreatSyft: CLI help",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -68,7 +68,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: CLI doctor",
+            "label": "ThreatSyft: CLI doctor",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -79,7 +79,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: CLI tools",
+            "label": "ThreatSyft: CLI tools",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -90,7 +90,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: CLI smoke safe samples",
+            "label": "ThreatSyft: CLI smoke safe samples",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -101,7 +101,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: Knowledge status",
+            "label": "ThreatSyft: Knowledge status",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -112,7 +112,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Investigatinator: Knowledge update all",
+            "label": "ThreatSyft: Knowledge update all",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [

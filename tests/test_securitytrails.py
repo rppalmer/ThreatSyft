@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import securitytrails
+from threatsyft.enrichment import securitytrails
 
 
 def test_securitytrails_domain_lookup_missing_api_key(monkeypatch) -> None:

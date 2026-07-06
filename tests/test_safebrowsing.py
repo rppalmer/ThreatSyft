@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import safebrowsing
+from threatsyft.enrichment import safebrowsing
 
 
 def test_google_safebrowsing_check_url_missing_api_key(monkeypatch) -> None:
@@ -30,7 +30,7 @@ def test_google_safebrowsing_check_url_no_match(monkeypatch) -> None:
     ) -> httpx.Response:
         assert url == "https://safebrowsing.googleapis.com/v4/threatMatches:find"
         assert params == {"key": "test-key"}
-        assert json["client"] == {"clientId": "investigatinator", "clientVersion": "1.0"}
+        assert json["client"] == {"clientId": "threatsyft", "clientVersion": "1.0"}
         assert timeout > 0
         return httpx.Response(200, request=httpx.Request("POST", url), json={})
 

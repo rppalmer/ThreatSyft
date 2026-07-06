@@ -1,7 +1,7 @@
 import dns.exception as dns_exception
 import dns.resolver as dns_resolver
 
-from investigatinator.enrichment import dns as dns_module
+from threatsyft.enrichment import dns as dns_module
 
 
 class FakeAnswer:

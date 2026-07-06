@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import rdap
+from threatsyft.enrichment import rdap
 
 
 def test_rdap_lookup_success(monkeypatch) -> None:

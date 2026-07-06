@@ -1,6 +1,6 @@
-# Investigatinator Architecture
+# ThreatSyft Architecture
 
-Investigatinator is a console-first Python security sidekick. It exposes focused, read-only security capabilities to an AI client through MCP while keeping the actual investigation logic in ordinary Python modules.
+ThreatSyft is a console-first Python security sidekick. It exposes focused, read-only security capabilities to an AI client through MCP while keeping the actual investigation logic in ordinary Python modules.
 
 The goal is to build a practical guided SOC sidekick: an agent can call tools, explain findings, and help prioritize next steps, but the tool layer should stay explicit, deterministic, and safe.
 
@@ -9,9 +9,9 @@ The goal is to build a practical guided SOC sidekick: an agent can call tools, e
 The current implementation has three MCP servers:
 
 ```text
-investigatinator-enrichment
-investigatinator-knowledge
-investigatinator-research
+threatsyft-enrichment
+threatsyft-knowledge
+threatsyft-research
 ```
 
 It exposes read-only enrichment tools for:
@@ -37,7 +37,7 @@ It exposes read-only enrichment tools for:
 - Aggregate file hash reputation fact packs
 - local enrichment provider status checks
 
-`investigatinator-knowledge` exposes local-only defensive knowledge tools for:
+`threatsyft-knowledge` exposes local-only defensive knowledge tools for:
 
 - MITRE ATT&CK Enterprise technique lookup
 - MITRE ATT&CK Enterprise technique search
@@ -54,7 +54,7 @@ It exposes read-only enrichment tools for:
 - LOLBAS search
 - local knowledge snapshot status checks
 
-`investigatinator-research` exposes live-network public research tools for:
+`threatsyft-research` exposes live-network public research tools for:
 
 - curated security feed search
 - configured research feed status checks
@@ -62,13 +62,13 @@ It exposes read-only enrichment tools for:
 - public article IOC extraction
 - public article research briefs with suggested pivots
 
-The MCP transport lives in `src/investigatinator/mcp/enrichment_server.py`. It should remain thin: register tools, accept explicit inputs, and delegate to core modules.
+The MCP transport lives in `src/threatsyft/mcp/enrichment_server.py`. It should remain thin: register tools, accept explicit inputs, and delegate to core modules.
 
-The knowledge MCP transport lives in `src/investigatinator/mcp/knowledge_server.py` and follows the same thin wrapper pattern.
+The knowledge MCP transport lives in `src/threatsyft/mcp/knowledge_server.py` and follows the same thin wrapper pattern.
 
-The research MCP transport lives in `src/investigatinator/mcp/research_server.py` and follows the same thin wrapper pattern.
+The research MCP transport lives in `src/threatsyft/mcp/research_server.py` and follows the same thin wrapper pattern.
 
-Core enrichment logic lives under `src/investigatinator/enrichment/`. Core knowledge logic lives under `src/investigatinator/knowledge/`. Core research logic lives under `src/investigatinator/research/`. These modules should be usable outside MCP, including from tests, future CLI commands, or future aggregate analysis functions.
+Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. Core research logic lives under `src/threatsyft/research/`. These modules should be usable outside MCP, including from tests, future CLI commands, or future aggregate analysis functions.
 
 All tools return the shared JSON envelope:
 
@@ -100,9 +100,9 @@ Errors use the same shape:
 
 ## Long-Term MCP Direction
 
-Investigatinator should build toward three focused MCP servers.
+ThreatSyft should build toward three focused MCP servers.
 
-### `investigatinator-enrichment`
+### `threatsyft-enrichment`
 
 Answers: what do external sources know about this indicator?
 
@@ -112,7 +112,7 @@ Examples:
 - VirusTotal, AbuseIPDB, Shodan, GreyNoise, SecurityTrails, AlienVault OTX, Google Safe Browsing
 - Aggregate tools such as `ip_reputation`, `domain_reputation`, `url_reputation`, and `file_reputation`
 
-### `investigatinator-knowledge`
+### `threatsyft-knowledge`
 
 Answers: what known security concepts, techniques, vulnerabilities, or references apply?
 
@@ -125,11 +125,11 @@ Examples:
 - defensive tradecraft and detection context
 - behavior-to-technique mapping
 
-The current knowledge MVP implements MITRE ATT&CK Enterprise lookups using a local STIX snapshot at `~/.investigatinator/knowledge/attack/enterprise-attack.json` by default, MITRE D3FEND lookups and ATT&CK-to-defense mappings using a local snapshot at `~/.investigatinator/knowledge/d3fend/d3fend.json`, targeted NVD CVE lookups, CISA KEV lookups using a local catalog snapshot at `~/.investigatinator/knowledge/cisa/known_exploited_vulnerabilities.json`, and LOLBAS lookups using a local catalog snapshot at `~/.investigatinator/knowledge/lolbas/lolbas.json`. All four paths can still be overridden with environment variables.
+The current knowledge MVP implements MITRE ATT&CK Enterprise lookups using a local STIX snapshot at `~/.threatsyft/knowledge/attack/enterprise-attack.json` by default, MITRE D3FEND lookups and ATT&CK-to-defense mappings using a local snapshot at `~/.threatsyft/knowledge/d3fend/d3fend.json`, targeted NVD CVE lookups, CISA KEV lookups using a local catalog snapshot at `~/.threatsyft/knowledge/cisa/known_exploited_vulnerabilities.json`, and LOLBAS lookups using a local catalog snapshot at `~/.threatsyft/knowledge/lolbas/lolbas.json`. All four paths can still be overridden with environment variables.
 
 Most runtime knowledge lookups are local-only. `cve_lookup` is intentionally live-network because a full CVE mirror is too large for this simple v1 project. Explicit update commands are responsible for downloading or refreshing local snapshots.
 
-### `investigatinator-research`
+### `threatsyft-research`
 
 Answers: what new public information exists, and what can be safely extracted or summarized from it?
 
@@ -161,7 +161,7 @@ Aggregate tools such as `ip_reputation`, `domain_reputation`, `url_reputation`, 
 
 ## Safety Posture
 
-Investigatinator is defensive by default.
+ThreatSyft is defensive by default.
 
 In scope:
 

@@ -2,13 +2,13 @@ import json
 
 import httpx
 
-from investigatinator.knowledge import update_attack
+from threatsyft.knowledge import update_attack
 
 
 def test_update_attack_snapshot_success(monkeypatch, tmp_path) -> None:
     snapshot = tmp_path / "enterprise-attack.json"
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(snapshot))
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_URL", "https://example.com/attack.json")
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(snapshot))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_URL", "https://example.com/attack.json")
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         assert url == "https://example.com/attack.json"
@@ -30,7 +30,7 @@ def test_update_attack_snapshot_success(monkeypatch, tmp_path) -> None:
 
 
 def test_update_attack_snapshot_timeout(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         raise httpx.TimeoutException("timeout")
@@ -44,7 +44,7 @@ def test_update_attack_snapshot_timeout(monkeypatch, tmp_path) -> None:
 
 
 def test_update_attack_snapshot_http_failure(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(500, request=httpx.Request("GET", url))
@@ -58,7 +58,7 @@ def test_update_attack_snapshot_http_failure(monkeypatch, tmp_path) -> None:
 
 
 def test_update_attack_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), content=b"not-json")
@@ -72,7 +72,7 @@ def test_update_attack_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
 
 
 def test_update_attack_snapshot_unexpected_shape(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(tmp_path / "attack.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(

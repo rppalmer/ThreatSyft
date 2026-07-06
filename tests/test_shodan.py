@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import shodan
+from threatsyft.enrichment import shodan
 
 
 def test_shodan_host_lookup_missing_api_key(monkeypatch) -> None:

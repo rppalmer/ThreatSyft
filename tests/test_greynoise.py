@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import greynoise
+from threatsyft.enrichment import greynoise
 
 
 def test_greynoise_ip_context_missing_api_key(monkeypatch) -> None:

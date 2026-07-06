@@ -1,4 +1,4 @@
-"""Console entrypoint for Investigatinator enrichment tools."""
+"""Console entrypoint for ThreatSyft enrichment tools."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ def main() -> int:
     """Run the local console interface without starting the MCP server."""
     _add_src_to_path()
 
-    from investigatinator.cli import main as cli_main
+    from threatsyft.cli import main as cli_main
 
     return cli_main()
 

@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.research import feeds
+from threatsyft.research import feeds
 
 RSS_FIXTURE = """<?xml version="1.0"?>
 <rss version="2.0">
@@ -36,7 +36,7 @@ ATOM_FIXTURE = """<?xml version="1.0"?>
 
 
 def test_research_feed_search_rss_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/rss.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         assert url == "https://example.com/rss.xml"
@@ -55,7 +55,7 @@ def test_research_feed_search_rss_success(monkeypatch) -> None:
 
 
 def test_research_feed_search_atom_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/atom.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/atom.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), text=ATOM_FIXTURE)
@@ -70,7 +70,7 @@ def test_research_feed_search_atom_success(monkeypatch) -> None:
 
 
 def test_research_feed_search_empty_query_returns_latest(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/rss.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), text=RSS_FIXTURE)
@@ -98,7 +98,7 @@ def test_research_feed_search_validates_limit_and_days() -> None:
 
 def test_research_feed_search_partial_feed_failure(monkeypatch) -> None:
     monkeypatch.setenv(
-        "INVESTIGATINATOR_RESEARCH_FEEDS",
+        "THREATSYFT_RESEARCH_FEEDS",
         "https://bad.example/rss.xml,https://good.example/rss.xml",
     )
 
@@ -118,7 +118,7 @@ def test_research_feed_search_partial_feed_failure(monkeypatch) -> None:
 
 
 def test_research_feed_search_all_feeds_failing(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://bad.example/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://bad.example/rss.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         return httpx.Response(500, request=httpx.Request("GET", url))
@@ -133,7 +133,7 @@ def test_research_feed_search_all_feeds_failing(monkeypatch) -> None:
 
 
 def test_research_feed_search_malformed_xml(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/rss.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), text="<rss>")
@@ -147,7 +147,7 @@ def test_research_feed_search_malformed_xml(monkeypatch) -> None:
 
 
 def test_research_feed_search_ignores_malformed_items(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/rss.xml")
     payload = (
         "<rss><channel><title>Feed</title><item><description>No title or link</description>"
         "</item></channel></rss>"
@@ -165,7 +165,7 @@ def test_research_feed_search_ignores_malformed_items(monkeypatch) -> None:
 
 
 def test_research_feed_search_zero_results_has_cautious_interpretation(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_RESEARCH_FEEDS", "https://example.com/rss.xml")
+    monkeypatch.setenv("THREATSYFT_RESEARCH_FEEDS", "https://example.com/rss.xml")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), text=RSS_FIXTURE)
@@ -181,7 +181,7 @@ def test_research_feed_search_zero_results_has_cautious_interpretation(monkeypat
 
 
 def test_research_feed_status_reports_defaults(monkeypatch) -> None:
-    monkeypatch.delenv("INVESTIGATINATOR_RESEARCH_FEEDS", raising=False)
+    monkeypatch.delenv("THREATSYFT_RESEARCH_FEEDS", raising=False)
 
     result = feeds.research_feed_status()
 
@@ -194,7 +194,7 @@ def test_research_feed_status_reports_defaults(monkeypatch) -> None:
 
 def test_research_feed_status_reports_environment_override(monkeypatch) -> None:
     monkeypatch.setenv(
-        "INVESTIGATINATOR_RESEARCH_FEEDS",
+        "THREATSYFT_RESEARCH_FEEDS",
         "https://example.com/rss.xml\nhttps://example.org/feed",
     )
 

@@ -1,6 +1,6 @@
 import anyio
 
-from investigatinator.mcp.enrichment_server import mcp
+from threatsyft.mcp.enrichment_server import mcp
 
 
 def test_mcp_server_registers_expected_tools() -> None:

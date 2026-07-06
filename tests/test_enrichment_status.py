@@ -1,4 +1,4 @@
-from investigatinator.enrichment.status import enrichment_status
+from threatsyft.enrichment.status import enrichment_status
 
 
 def test_enrichment_status_reports_key_presence_without_secret_values(monkeypatch) -> None:

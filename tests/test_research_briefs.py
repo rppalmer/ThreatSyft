@@ -1,4 +1,4 @@
-from investigatinator.research import briefs
+from threatsyft.research import briefs
 
 
 def test_research_brief_invalid_url() -> None:

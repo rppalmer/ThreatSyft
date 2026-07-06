@@ -1,6 +1,6 @@
 from typing import Any
 
-from investigatinator.enrichment import url_reputation
+from threatsyft.enrichment import url_reputation
 
 
 def test_url_reputation_rejects_domain_only() -> None:

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from investigatinator.knowledge import d3fend
+from threatsyft.knowledge import d3fend
 
 FIXTURE_PATH = Path("tests/fixtures/d3fend-mini.json")
 
@@ -19,7 +19,7 @@ def test_load_d3fend_catalog_missing_snapshot() -> None:
         d3fend.load_d3fend_catalog(Path("tests/fixtures/missing-d3fend.json"))
     except d3fend.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "investigatinator knowledge-update d3fend"
+        assert exc.details["setup_command"] == "threatsyft knowledge-update d3fend"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 
@@ -37,7 +37,7 @@ def test_load_d3fend_catalog_malformed_json(tmp_path) -> None:
 
 
 def test_d3fend_lookup_by_id(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.d3fend_lookup("d3-fa")
 
@@ -49,7 +49,7 @@ def test_d3fend_lookup_by_id(monkeypatch) -> None:
 
 
 def test_d3fend_lookup_by_name(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.d3fend_lookup("File Inspection")
 
@@ -58,7 +58,7 @@ def test_d3fend_lookup_by_name(monkeypatch) -> None:
 
 
 def test_d3fend_lookup_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.d3fend_lookup("No Such Defense")
 
@@ -67,7 +67,7 @@ def test_d3fend_lookup_not_found(monkeypatch) -> None:
 
 
 def test_d3fend_search_returns_matches(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.d3fend_search("process", limit=5)
 
@@ -77,7 +77,7 @@ def test_d3fend_search_returns_matches(monkeypatch) -> None:
 
 
 def test_d3fend_search_limit_validation(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.d3fend_search("process", limit=26)
 
@@ -86,7 +86,7 @@ def test_d3fend_search_limit_validation(monkeypatch) -> None:
 
 
 def test_attack_defense_mapping_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.attack_defense_mapping("t1059")
 
@@ -108,7 +108,7 @@ def test_attack_defense_mapping_invalid_id() -> None:
 
 
 def test_attack_defense_mapping_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(FIXTURE_PATH))
 
     result = d3fend.attack_defense_mapping("T1234")
 

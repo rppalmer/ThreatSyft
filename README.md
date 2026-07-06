@@ -1,12 +1,12 @@
-# Investigatinator
+# ThreatSyft
 
-Investigatinator is a console-first Python security sidekick. It exposes focused tools through local MCP servers so an AI client, such as VS Code with MCP support, can request structured security context without getting unsafe general-purpose access to the machine.
+ThreatSyft is a console-first Python security sidekick. It exposes focused tools through local MCP servers so an AI client, such as VS Code with MCP support, can request structured security context without getting unsafe general-purpose access to the machine.
 
 The current implementation has an enrichment server for indicator context, a knowledge server for defensive ATT&CK, D3FEND, CVE, KEV, and LOLBAS context, and a research server for public threat-report discovery. All three keep core logic separate from the MCP transport layer.
 
 ## What It Does
 
-Investigatinator helps enrich IP addresses, domains, URLs, and file hashes with common security investigation context:
+ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common security investigation context:
 
 - DNS records for a domain
 - RDAP registration data for a domain or IP address
@@ -75,7 +75,7 @@ Errors use the same shape, which makes results easier for humans and AI clients 
 
 ## MCP Servers
 
-The enrichment MCP server is defined in `src/investigatinator/mcp/enrichment_server.py`.
+The enrichment MCP server is defined in `src/threatsyft/mcp/enrichment_server.py`.
 
 It exposes focused read-only tools:
 
@@ -99,7 +99,7 @@ It exposes focused read-only tools:
 - `url_reputation(url: str)`
 - `file_reputation(file_hash: str)`
 
-The knowledge MCP server is defined in `src/investigatinator/mcp/knowledge_server.py`.
+The knowledge MCP server is defined in `src/threatsyft/mcp/knowledge_server.py`.
 
 It exposes defensive knowledge tools:
 
@@ -118,7 +118,7 @@ It exposes defensive knowledge tools:
 - `lolbas_search(query: str, limit: int = 10)`
 - `knowledge_status()`
 
-The research MCP server is defined in `src/investigatinator/mcp/research_server.py`.
+The research MCP server is defined in `src/threatsyft/mcp/research_server.py`.
 
 It exposes public threat-report research tools:
 
@@ -131,20 +131,20 @@ It exposes public threat-report research tools:
 Each MCP server is a plain stdio server. After installing the package, start them with stable console commands:
 
 ```bash
-investigatinator-enrichment-mcp
-investigatinator-knowledge-mcp
-investigatinator-research-mcp
+threatsyft-enrichment-mcp
+threatsyft-knowledge-mcp
+threatsyft-research-mcp
 ```
 
 For repository-local development, VS Code also includes `.vscode/mcp.json` entries that start the same servers from the project virtual environment:
 
 ```bash
-.venv/bin/python -m investigatinator.mcp.enrichment_server
-.venv/bin/python -m investigatinator.mcp.knowledge_server
-.venv/bin/python -m investigatinator.mcp.research_server
+.venv/bin/python -m threatsyft.mcp.enrichment_server
+.venv/bin/python -m threatsyft.mcp.knowledge_server
+.venv/bin/python -m threatsyft.mcp.research_server
 ```
 
-The MCP layers are deliberately thin. They register tools and pass requests to core modules. Enrichment logic lives under `src/investigatinator/enrichment/`, knowledge logic lives under `src/investigatinator/knowledge/`, and public research logic lives under `src/investigatinator/research/`.
+The MCP layers are deliberately thin. They register tools and pass requests to core modules. Enrichment logic lives under `src/threatsyft/enrichment/`, knowledge logic lives under `src/threatsyft/knowledge/`, and public research logic lives under `src/threatsyft/research/`.
 
 ## Tool Overview
 
@@ -550,7 +550,7 @@ Returned data includes article metadata, snippets, extracted IOCs, IOC counts, k
 ├── requirements-dev.txt
 ├── pyproject.toml
 ├── src/
-│   └── investigatinator/
+│   └── threatsyft/
 │       ├── config.py
 │       ├── enrichment/
 │       │   ├── abuseipdb.py
@@ -590,20 +590,20 @@ Returned data includes article metadata, snippets, extracted IOCs, IOC counts, k
 
 The current version supports these environment variables:
 
-- `INVESTIGATINATOR_TIMEOUT_SECONDS`: network timeout for enrichment calls. Defaults to `15`.
-- `INVESTIGATINATOR_ATTACK_STIX_PATH`: local MITRE ATT&CK Enterprise STIX cache path. Defaults to `~/.investigatinator/knowledge/attack/enterprise-attack.json`.
-- `INVESTIGATINATOR_ATTACK_STIX_URL`: source URL used by the explicit ATT&CK update command.
-- `INVESTIGATINATOR_CISA_KEV_PATH`: local CISA KEV cache path. Defaults to `~/.investigatinator/knowledge/cisa/known_exploited_vulnerabilities.json`.
-- `INVESTIGATINATOR_CISA_KEV_URL`: source URL used by the explicit CISA KEV update command.
-- `INVESTIGATINATOR_D3FEND_PATH`: local D3FEND cache path. Defaults to `~/.investigatinator/knowledge/d3fend/d3fend.json`.
-- `INVESTIGATINATOR_D3FEND_TECHNIQUES_URL`: source URL used by the explicit D3FEND update command.
-- `INVESTIGATINATOR_D3FEND_TACTICS_URL`: source URL used by the explicit D3FEND update command.
-- `INVESTIGATINATOR_D3FEND_MAPPINGS_URL`: source URL used by the explicit D3FEND update command.
-- `INVESTIGATINATOR_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
-- `INVESTIGATINATOR_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.investigatinator/knowledge/lolbas/lolbas.json`.
-- `INVESTIGATINATOR_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
-- `INVESTIGATINATOR_RESEARCH_FEEDS`: comma- or newline-separated public RSS/Atom feed URLs for `research_feed_search`. Defaults to BleepingComputer News and Google Cloud Threat Intelligence.
-- `INVESTIGATINATOR_RESEARCH_USER_AGENT`: user agent used by research HTTP requests. Defaults to `Investigatinator/1.0`.
+- `THREATSYFT_TIMEOUT_SECONDS`: network timeout for enrichment calls. Defaults to `15`.
+- `THREATSYFT_ATTACK_STIX_PATH`: local MITRE ATT&CK Enterprise STIX cache path. Defaults to `~/.threatsyft/knowledge/attack/enterprise-attack.json`.
+- `THREATSYFT_ATTACK_STIX_URL`: source URL used by the explicit ATT&CK update command.
+- `THREATSYFT_CISA_KEV_PATH`: local CISA KEV cache path. Defaults to `~/.threatsyft/knowledge/cisa/known_exploited_vulnerabilities.json`.
+- `THREATSYFT_CISA_KEV_URL`: source URL used by the explicit CISA KEV update command.
+- `THREATSYFT_D3FEND_PATH`: local D3FEND cache path. Defaults to `~/.threatsyft/knowledge/d3fend/d3fend.json`.
+- `THREATSYFT_D3FEND_TECHNIQUES_URL`: source URL used by the explicit D3FEND update command.
+- `THREATSYFT_D3FEND_TACTICS_URL`: source URL used by the explicit D3FEND update command.
+- `THREATSYFT_D3FEND_MAPPINGS_URL`: source URL used by the explicit D3FEND update command.
+- `THREATSYFT_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
+- `THREATSYFT_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.threatsyft/knowledge/lolbas/lolbas.json`.
+- `THREATSYFT_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
+- `THREATSYFT_RESEARCH_FEEDS`: comma- or newline-separated public RSS/Atom feed URLs for `research_feed_search`. Defaults to BleepingComputer News and Google Cloud Threat Intelligence.
+- `THREATSYFT_RESEARCH_USER_AGENT`: user agent used by research HTTP requests. Defaults to `ThreatSyft/1.0`.
 - `ABUSEIPDB_API_KEY`: API key for `abuseipdb_check_ip`.
 - `GREYNOISE_API_KEY`: API key for `greynoise_ip_context`.
 - `VIRUSTOTAL_API_KEY`: API key for VirusTotal IP, domain, URL, and file reports.
@@ -619,7 +619,7 @@ Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
 For easier feed editing, use a quoted multiline value:
 
 ```env
-INVESTIGATINATOR_RESEARCH_FEEDS="
+THREATSYFT_RESEARCH_FEEDS="
 https://feeds.feedburner.com/TheHackersNews
 https://www.recordedfuture.com/category/cyber/feed/
 https://www.anomali.com/site/blog-rss
@@ -631,7 +631,7 @@ https://isc.sans.edu/rssfeed_full.xml
 
 ## Host Compatibility
 
-Investigatinator works with MCP hosts that can launch local stdio servers. The server code is host-generic; the only host-specific part is the configuration file format.
+ThreatSyft works with MCP hosts that can launch local stdio servers. The server code is host-generic; the only host-specific part is the configuration file format.
 
 Install the project in a virtual environment:
 
@@ -642,7 +642,7 @@ python -m pip install -e .
 Then configure your MCP host to launch one or more of the console scripts. If the
 host does not inherit your shell `PATH`, use the absolute path to the script in
 your virtual environment, such as
-`/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp`.
+`/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp`.
 
 LM Studio and Cursor use a Cursor-style `mcp.json` with a top-level
 `mcpServers` object:
@@ -650,14 +650,14 @@ LM Studio and Cursor use a Cursor-style `mcp.json` with a top-level
 ```json
 {
   "mcpServers": {
-    "investigatinator-enrichment": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+    "threatsyft-enrichment": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp"
     },
-    "investigatinator-knowledge": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+    "threatsyft-knowledge": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
     },
-    "investigatinator-research": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+    "threatsyft-research": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }
@@ -668,17 +668,17 @@ VS Code uses `.vscode/mcp.json` with a top-level `servers` object:
 ```json
 {
   "servers": {
-    "investigatinator-enrichment": {
+    "threatsyft-enrichment": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp"
     },
-    "investigatinator-knowledge": {
+    "threatsyft-knowledge": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
     },
-    "investigatinator-research": {
+    "threatsyft-research": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }
@@ -818,7 +818,7 @@ A successful result exits with code `0`. A failed lookup or invalid input exits 
 
 ## Design Principles
 
-Investigatinator favors:
+ThreatSyft favors:
 
 - clear boundaries between MCP transport and enrichment logic
 - explicit tool inputs and outputs

@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import virustotal
+from threatsyft.enrichment import virustotal
 
 
 def test_virustotal_ip_report_missing_api_key(monkeypatch) -> None:

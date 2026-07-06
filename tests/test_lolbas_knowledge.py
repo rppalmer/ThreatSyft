@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from investigatinator.knowledge import lolbas
+from threatsyft.knowledge import lolbas
 
 FIXTURE_PATH = Path("tests/fixtures/lolbas-mini.json")
 
@@ -18,7 +18,7 @@ def test_load_lolbas_catalog_missing_snapshot() -> None:
         lolbas.load_lolbas_catalog(Path("tests/fixtures/missing-lolbas.json"))
     except lolbas.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "investigatinator knowledge-update lolbas"
+        assert exc.details["setup_command"] == "threatsyft knowledge-update lolbas"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 
@@ -36,7 +36,7 @@ def test_load_lolbas_catalog_malformed_json(tmp_path) -> None:
 
 
 def test_lolbas_lookup_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(FIXTURE_PATH))
 
     result = lolbas.lolbas_lookup("certutil.exe")
 
@@ -58,7 +58,7 @@ def test_lolbas_lookup_invalid_name() -> None:
 
 
 def test_lolbas_lookup_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(FIXTURE_PATH))
 
     result = lolbas.lolbas_lookup("notepad.exe")
 
@@ -67,7 +67,7 @@ def test_lolbas_lookup_not_found(monkeypatch) -> None:
 
 
 def test_lolbas_search_returns_matches(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(FIXTURE_PATH))
 
     result = lolbas.lolbas_search("certutil", limit=5)
 
@@ -78,7 +78,7 @@ def test_lolbas_search_returns_matches(monkeypatch) -> None:
 
 
 def test_lolbas_search_limit_validation(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(FIXTURE_PATH))
 
     result = lolbas.lolbas_search("download", limit=26)
 

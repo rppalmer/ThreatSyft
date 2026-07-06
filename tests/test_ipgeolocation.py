@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import ipgeolocation
+from threatsyft.enrichment import ipgeolocation
 
 
 def test_ipgeolocation_lookup_missing_api_key(monkeypatch) -> None:

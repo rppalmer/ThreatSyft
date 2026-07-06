@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.research import articles
+from threatsyft.research import articles
 
 ARTICLE_HTML = """
 <html>
@@ -54,6 +54,28 @@ def test_research_article_summary_rejects_unsafe_urls() -> None:
         result = articles.research_article_summary(url)
         assert result["ok"] is False
         assert result["error"]["code"] == "invalid_input"
+
+
+def test_research_article_summary_rejects_hostname_resolving_to_private_ip(monkeypatch) -> None:
+    import ipaddress
+
+    from threatsyft.research import url_validation
+
+    monkeypatch.setattr(
+        url_validation,
+        "resolve_host_addresses",
+        lambda hostname: [ipaddress.ip_address("169.254.169.254")],
+    )
+
+    def fail_get(*args, **kwargs) -> httpx.Response:
+        raise AssertionError("SSRF guard must reject before any HTTP request is made.")
+
+    monkeypatch.setattr(articles.httpx, "get", fail_get)
+
+    result = articles.research_article_summary("https://metadata.internal.example/latest")
+
+    assert result["ok"] is False
+    assert result["error"]["code"] == "invalid_input"
 
 
 def test_research_article_summary_timeout(monkeypatch) -> None:

@@ -1,4 +1,4 @@
-from investigatinator.enrichment import whois as whois_module
+from threatsyft.enrichment import whois as whois_module
 
 
 def test_domain_whois_success(monkeypatch) -> None:

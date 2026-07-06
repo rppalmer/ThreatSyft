@@ -1,6 +1,6 @@
 # Agent Instructions
 
-Investigatinator is a local Python security sidekick that uses MCP as the agent tool layer. The project favors clear, simple, maintainable Python for a single developer building practical defensive security workflows.
+ThreatSyft is a local Python security sidekick that uses MCP as the agent tool layer. The project favors clear, simple, maintainable Python for a single developer building practical defensive security workflows.
 
 ## Read First
 
@@ -25,8 +25,8 @@ Investigatinator is a local Python security sidekick that uses MCP as the agent 
 
 Build toward three focused MCP servers over time:
 
-- `investigatinator-enrichment`: indicator enrichment and vendor API lookups.
-- `investigatinator-knowledge`: MITRE ATT&CK, CVEs, CISA KEV, LOLBAS, living-off-the-land, and defensive tradecraft knowledge.
-- `investigatinator-research`: current public write-ups, summaries, attack flow extraction, and IOC extraction.
+- `threatsyft-enrichment`: indicator enrichment and vendor API lookups.
+- `threatsyft-knowledge`: MITRE ATT&CK, CVEs, CISA KEV, LOLBAS, living-off-the-land, and defensive tradecraft knowledge.
+- `threatsyft-research`: current public write-ups, summaries, attack flow extraction, and IOC extraction.
 
 Do not split servers before the behavior justifies it. The current implementation should continue using the existing enrichment server while the project is small.

@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import abuseipdb
+from threatsyft.enrichment import abuseipdb
 
 
 def test_abuseipdb_check_ip_missing_api_key(monkeypatch) -> None:

@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.enrichment import alienvault
+from threatsyft.enrichment import alienvault
 
 
 def test_alienvault_indicator_lookup_missing_api_key(monkeypatch) -> None:

@@ -1,6 +1,6 @@
 import httpx
 
-from investigatinator.knowledge import cve
+from threatsyft.knowledge import cve
 
 
 def test_cve_lookup_rejects_invalid_cve() -> None:

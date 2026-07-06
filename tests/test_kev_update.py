@@ -2,13 +2,13 @@ import json
 
 import httpx
 
-from investigatinator.knowledge import update_kev
+from threatsyft.knowledge import update_kev
 
 
 def test_update_kev_snapshot_success(monkeypatch, tmp_path) -> None:
     snapshot = tmp_path / "known_exploited_vulnerabilities.json"
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(snapshot))
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_URL", "https://example.com/kev.json")
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(snapshot))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_URL", "https://example.com/kev.json")
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         assert url == "https://example.com/kev.json"
@@ -30,7 +30,7 @@ def test_update_kev_snapshot_success(monkeypatch, tmp_path) -> None:
 
 
 def test_update_kev_snapshot_timeout(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(tmp_path / "kev.json"))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(tmp_path / "kev.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         raise httpx.TimeoutException("timeout")
@@ -44,7 +44,7 @@ def test_update_kev_snapshot_timeout(monkeypatch, tmp_path) -> None:
 
 
 def test_update_kev_snapshot_http_failure(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(tmp_path / "kev.json"))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(tmp_path / "kev.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(500, request=httpx.Request("GET", url))
@@ -58,7 +58,7 @@ def test_update_kev_snapshot_http_failure(monkeypatch, tmp_path) -> None:
 
 
 def test_update_kev_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(tmp_path / "kev.json"))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(tmp_path / "kev.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), content=b"not-json")
@@ -72,7 +72,7 @@ def test_update_kev_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
 
 
 def test_update_kev_snapshot_unexpected_shape(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(tmp_path / "kev.json"))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(tmp_path / "kev.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), json={"title": "KEV"})

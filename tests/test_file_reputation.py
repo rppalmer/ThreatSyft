@@ -1,6 +1,6 @@
 from typing import Any
 
-from investigatinator.enrichment import file_reputation
+from threatsyft.enrichment import file_reputation
 
 
 def test_file_reputation_rejects_invalid_hash() -> None:

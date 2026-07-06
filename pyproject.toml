@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "investigatinator"
+name = "threatsyft"
 version = "0.1.0"
 description = "Console-first Python security sidekick with focused MCP servers."
 readme = "README.md"
@@ -20,10 +20,10 @@ dependencies = [
 ]
 
 [project.scripts]
-investigatinator = "investigatinator.cli:main"
-investigatinator-enrichment-mcp = "investigatinator.mcp.enrichment_server:main"
-investigatinator-knowledge-mcp = "investigatinator.mcp.knowledge_server:main"
-investigatinator-research-mcp = "investigatinator.mcp.research_server:main"
+threatsyft = "threatsyft.cli:main"
+threatsyft-enrichment-mcp = "threatsyft.mcp.enrichment_server:main"
+threatsyft-knowledge-mcp = "threatsyft.mcp.knowledge_server:main"
+threatsyft-research-mcp = "threatsyft.mcp.research_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

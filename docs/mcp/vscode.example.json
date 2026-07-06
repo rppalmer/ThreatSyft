@@ -1,16 +1,16 @@
 {
   "servers": {
-    "investigatinator-enrichment": {
+    "threatsyft-enrichment": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp"
     },
-    "investigatinator-knowledge": {
+    "threatsyft-knowledge": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
     },
-    "investigatinator-research": {
+    "threatsyft-research": {
       "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }

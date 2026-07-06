@@ -8,12 +8,12 @@ def test_pyproject_exposes_console_scripts() -> None:
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
 
     assert data["build-system"]["build-backend"] == "setuptools.build_meta"
-    assert data["project"]["name"] == "investigatinator"
+    assert data["project"]["name"] == "threatsyft"
     assert data["project"]["scripts"] == {
-        "investigatinator": "investigatinator.cli:main",
-        "investigatinator-enrichment-mcp": "investigatinator.mcp.enrichment_server:main",
-        "investigatinator-knowledge-mcp": "investigatinator.mcp.knowledge_server:main",
-        "investigatinator-research-mcp": "investigatinator.mcp.research_server:main",
+        "threatsyft": "threatsyft.cli:main",
+        "threatsyft-enrichment-mcp": "threatsyft.mcp.enrichment_server:main",
+        "threatsyft-knowledge-mcp": "threatsyft.mcp.knowledge_server:main",
+        "threatsyft-research-mcp": "threatsyft.mcp.research_server:main",
     }
 
 
@@ -30,7 +30,7 @@ def test_mcp_example_configs_are_valid_json() -> None:
 
         assert top_level_key in data
         assert set(data[top_level_key]) == {
-            "investigatinator-enrichment",
-            "investigatinator-knowledge",
-            "investigatinator-research",
+            "threatsyft-enrichment",
+            "threatsyft-knowledge",
+            "threatsyft-research",
         }

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from investigatinator.knowledge import attack
+from threatsyft.knowledge import attack
 
 FIXTURE_PATH = Path("tests/fixtures/attack-enterprise-mini.json")
 
@@ -21,7 +21,7 @@ def test_load_attack_knowledge_missing_snapshot() -> None:
         attack.load_attack_knowledge(Path("tests/fixtures/missing-attack.json"))
     except attack.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "investigatinator knowledge-update attack"
+        assert exc.details["setup_command"] == "threatsyft knowledge-update attack"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 
@@ -39,7 +39,7 @@ def test_load_attack_knowledge_malformed_json(tmp_path) -> None:
 
 
 def test_attack_technique_lookup_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_technique_lookup("t1059")
 
@@ -58,7 +58,7 @@ def test_attack_technique_lookup_success(monkeypatch) -> None:
 
 
 def test_attack_technique_lookup_subtechnique(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_technique_lookup("T1059.001")
 
@@ -68,7 +68,7 @@ def test_attack_technique_lookup_subtechnique(monkeypatch) -> None:
 
 
 def test_attack_technique_lookup_flags_deprecated(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_technique_lookup("T9999")
 
@@ -84,7 +84,7 @@ def test_attack_technique_lookup_invalid_id() -> None:
 
 
 def test_attack_technique_lookup_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_technique_lookup("T1234")
 
@@ -93,7 +93,7 @@ def test_attack_technique_lookup_not_found(monkeypatch) -> None:
 
 
 def test_attack_search_returns_ranked_matches(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_search("powershell", limit=5)
 
@@ -104,7 +104,7 @@ def test_attack_search_returns_ranked_matches(monkeypatch) -> None:
 
 
 def test_attack_search_limit_validation(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_search("powershell", limit=26)
 
@@ -113,7 +113,7 @@ def test_attack_search_limit_validation(monkeypatch) -> None:
 
 
 def test_attack_tactic_lookup_by_short_name(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_tactic_lookup("initial-access")
 
@@ -123,7 +123,7 @@ def test_attack_tactic_lookup_by_short_name(monkeypatch) -> None:
 
 
 def test_attack_tactic_lookup_by_display_name(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_tactic_lookup("Initial Access")
 
@@ -132,7 +132,7 @@ def test_attack_tactic_lookup_by_display_name(monkeypatch) -> None:
 
 
 def test_attack_tactic_lookup_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
     result = attack.attack_tactic_lookup("impact")
 

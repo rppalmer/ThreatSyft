@@ -12,7 +12,7 @@
             }
         },
         {
-            "name": "Investigatinator: main",
+            "name": "ThreatSyft: main",
             "type": "debugpy",
             "request": "launch",
             "module": "main",
@@ -23,10 +23,10 @@
             }
         },
         {
-            "name": "Investigatinator: MCP enrichment server",
+            "name": "ThreatSyft: MCP enrichment server",
             "type": "debugpy",
             "request": "launch",
-            "module": "investigatinator.mcp.enrichment_server",
+            "module": "threatsyft.mcp.enrichment_server",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {

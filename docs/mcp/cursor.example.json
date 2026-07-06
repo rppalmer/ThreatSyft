@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "investigatinator-enrichment": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-enrichment-mcp"
+    "threatsyft-enrichment": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp"
     },
-    "investigatinator-knowledge": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-knowledge-mcp"
+    "threatsyft-knowledge": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
     },
-    "investigatinator-research": {
-      "command": "/absolute/path/to/.venv/bin/investigatinator-research-mcp"
+    "threatsyft-research": {
+      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }

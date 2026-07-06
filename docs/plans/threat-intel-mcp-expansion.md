@@ -1,16 +1,16 @@
 # Threat Intel MCP Expansion Plan
 
-This plan records the next API-backed enrichment phase and the long-term MCP direction for Investigatinator.
+This plan records the next API-backed enrichment phase and the long-term MCP direction for ThreatSyft.
 
 ## Summary
 
-Keep Investigatinator as one local MCP server for now and add API-backed, read-only IP enrichment in small chunks. The first implementation slice should add provider-specific tools for AbuseIPDB and GreyNoise.
+Keep ThreatSyft as one local MCP server for now and add API-backed, read-only IP enrichment in small chunks. The first implementation slice should add provider-specific tools for AbuseIPDB and GreyNoise.
 
 Long term, build toward three focused MCP servers:
 
-- `investigatinator-enrichment`
-- `investigatinator-knowledge`
-- `investigatinator-research`
+- `threatsyft-enrichment`
+- `threatsyft-knowledge`
+- `threatsyft-research`
 
 The enrichment, knowledge, and research servers now exist. Do not create additional servers until the behavior and maintenance needs justify it.
 
@@ -111,7 +111,7 @@ They should return deterministic evidence bundles, not final AI-written investig
 
 ### Enrichment
 
-`investigatinator-enrichment` answers: what do external sources know about this indicator?
+`threatsyft-enrichment` answers: what do external sources know about this indicator?
 
 This server owns:
 
@@ -121,7 +121,7 @@ This server owns:
 
 ### Knowledge
 
-`investigatinator-knowledge` answers: what known security concepts, techniques, vulnerabilities, or references apply?
+`threatsyft-knowledge` answers: what known security concepts, techniques, vulnerabilities, or references apply?
 
 Current implementation:
 
@@ -153,7 +153,7 @@ This server should eventually own:
 
 ### Research
 
-`investigatinator-research` answers: what new public information exists, and what can be safely extracted or summarized from it?
+`threatsyft-research` answers: what new public information exists, and what can be safely extracted or summarized from it?
 
 Current implementation:
 

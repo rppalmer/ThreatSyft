@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from investigatinator.knowledge import status
+from threatsyft.knowledge import status
 
 ATTACK_FIXTURE = Path("tests/fixtures/attack-enterprise-mini.json")
 D3FEND_FIXTURE = Path("tests/fixtures/d3fend-mini.json")
@@ -9,10 +9,10 @@ LOLBAS_FIXTURE = Path("tests/fixtures/lolbas-mini.json")
 
 
 def test_knowledge_status_all_snapshots_available(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(D3FEND_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(KEV_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(LOLBAS_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(D3FEND_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(KEV_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(LOLBAS_FIXTURE))
     monkeypatch.setenv("NVD_API_KEY", "test-key")
 
     result = status.knowledge_status()
@@ -40,10 +40,10 @@ def test_knowledge_status_all_snapshots_available(monkeypatch) -> None:
 
 
 def test_knowledge_status_reports_missing_snapshot(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", "tests/fixtures/missing-attack.json")
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(D3FEND_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(KEV_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(LOLBAS_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", "tests/fixtures/missing-attack.json")
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(D3FEND_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(KEV_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(LOLBAS_FIXTURE))
 
     result = status.knowledge_status()
 
@@ -54,17 +54,17 @@ def test_knowledge_status_reports_missing_snapshot(monkeypatch) -> None:
     assert result["data"]["snapshots"]["attack"]["status"] == "not_found"
     assert result["data"]["snapshots"]["attack"]["file_modified_at"] is None
     assert result["data"]["snapshots"]["attack"]["setup_command"] == (
-        "investigatinator knowledge-update attack"
+        "threatsyft knowledge-update attack"
     )
 
 
 def test_knowledge_status_reports_parse_error(monkeypatch, tmp_path) -> None:
     malformed = tmp_path / "bad-kev.json"
     malformed.write_text("not-json", encoding="utf-8")
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(D3FEND_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(malformed))
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(LOLBAS_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(D3FEND_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(malformed))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(LOLBAS_FIXTURE))
 
     result = status.knowledge_status()
 
@@ -76,10 +76,10 @@ def test_knowledge_status_reports_parse_error(monkeypatch, tmp_path) -> None:
 
 
 def test_knowledge_status_does_not_require_nvd_key(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(D3FEND_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(KEV_FIXTURE))
-    monkeypatch.setenv("INVESTIGATINATOR_LOLBAS_PATH", str(LOLBAS_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(ATTACK_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(D3FEND_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(KEV_FIXTURE))
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(LOLBAS_FIXTURE))
     monkeypatch.delenv("NVD_API_KEY", raising=False)
 
     result = status.knowledge_status()

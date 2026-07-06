@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from investigatinator.knowledge import kev
+from threatsyft.knowledge import kev
 
 FIXTURE_PATH = Path("tests/fixtures/cisa-kev-mini.json")
 
@@ -18,7 +18,7 @@ def test_load_kev_catalog_missing_snapshot() -> None:
         kev.load_kev_catalog(Path("tests/fixtures/missing-kev.json"))
     except kev.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "investigatinator knowledge-update kev"
+        assert exc.details["setup_command"] == "threatsyft knowledge-update kev"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 
@@ -36,7 +36,7 @@ def test_load_kev_catalog_malformed_json(tmp_path) -> None:
 
 
 def test_kev_lookup_success(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
 
     result = kev.kev_lookup("cve-2023-34362")
 
@@ -56,7 +56,7 @@ def test_kev_lookup_invalid_cve() -> None:
 
 
 def test_kev_lookup_not_found(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
 
     result = kev.kev_lookup("CVE-1999-0001")
 
@@ -65,7 +65,7 @@ def test_kev_lookup_not_found(monkeypatch) -> None:
 
 
 def test_kev_search_returns_matches(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
 
     result = kev.kev_search("MOVEit", limit=5)
 
@@ -76,7 +76,7 @@ def test_kev_search_returns_matches(monkeypatch) -> None:
 
 
 def test_kev_search_limit_validation(monkeypatch) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_CISA_KEV_PATH", str(FIXTURE_PATH))
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
 
     result = kev.kev_search("MOVEit", limit=0)
 

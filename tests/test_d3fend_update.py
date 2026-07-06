@@ -2,15 +2,15 @@ import json
 
 import httpx
 
-from investigatinator.knowledge import update_d3fend
+from threatsyft.knowledge import update_d3fend
 
 
 def test_update_d3fend_snapshot_success(monkeypatch, tmp_path) -> None:
     snapshot = tmp_path / "d3fend.json"
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(snapshot))
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_TECHNIQUES_URL", "https://example.com/tech.json")
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_TACTICS_URL", "https://example.com/tactic.json")
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_MAPPINGS_URL", "https://example.com/map.json")
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(snapshot))
+    monkeypatch.setenv("THREATSYFT_D3FEND_TECHNIQUES_URL", "https://example.com/tech.json")
+    monkeypatch.setenv("THREATSYFT_D3FEND_TACTICS_URL", "https://example.com/tactic.json")
+    monkeypatch.setenv("THREATSYFT_D3FEND_MAPPINGS_URL", "https://example.com/map.json")
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         payloads = {
@@ -32,7 +32,7 @@ def test_update_d3fend_snapshot_success(monkeypatch, tmp_path) -> None:
 
 
 def test_update_d3fend_snapshot_timeout(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(tmp_path / "d3fend.json"))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(tmp_path / "d3fend.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         raise httpx.TimeoutException("timeout")
@@ -46,7 +46,7 @@ def test_update_d3fend_snapshot_timeout(monkeypatch, tmp_path) -> None:
 
 
 def test_update_d3fend_snapshot_http_failure(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(tmp_path / "d3fend.json"))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(tmp_path / "d3fend.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(500, request=httpx.Request("GET", url))
@@ -60,7 +60,7 @@ def test_update_d3fend_snapshot_http_failure(monkeypatch, tmp_path) -> None:
 
 
 def test_update_d3fend_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(tmp_path / "d3fend.json"))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(tmp_path / "d3fend.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), content=b"not-json")
@@ -74,7 +74,7 @@ def test_update_d3fend_snapshot_invalid_json(monkeypatch, tmp_path) -> None:
 
 
 def test_update_d3fend_snapshot_unexpected_shape(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("INVESTIGATINATOR_D3FEND_PATH", str(tmp_path / "d3fend.json"))
+    monkeypatch.setenv("THREATSYFT_D3FEND_PATH", str(tmp_path / "d3fend.json"))
 
     def fake_get(url: str, timeout: float) -> httpx.Response:
         return httpx.Response(200, request=httpx.Request("GET", url), json={})

@@ -1,4 +1,4 @@
-from investigatinator.knowledge import briefs
+from threatsyft.knowledge import briefs
 
 
 def test_technique_brief_success(monkeypatch) -> None:

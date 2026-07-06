@@ -1,12 +1,12 @@
 {
     "servers": {
-        "investigatinator-enrichment": {
+        "threatsyft-enrichment": {
             "type": "stdio",
             "command": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [
                 "-m",
-                "investigatinator.mcp.enrichment_server"
+                "threatsyft.mcp.enrichment_server"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
@@ -18,13 +18,13 @@
                 }
             }
         },
-        "investigatinator-knowledge": {
+        "threatsyft-knowledge": {
             "type": "stdio",
             "command": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [
                 "-m",
-                "investigatinator.mcp.knowledge_server"
+                "threatsyft.mcp.knowledge_server"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
@@ -36,13 +36,13 @@
                 }
             }
         },
-        "investigatinator-research": {
+        "threatsyft-research": {
             "type": "stdio",
             "command": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [
                 "-m",
-                "investigatinator.mcp.research_server"
+                "threatsyft.mcp.research_server"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

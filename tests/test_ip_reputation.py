@@ -1,6 +1,6 @@
 from typing import Any
 
-from investigatinator.enrichment import ip_reputation
+from threatsyft.enrichment import ip_reputation
 
 
 def test_ip_reputation_rejects_invalid_ip() -> None:

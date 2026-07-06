@@ -1,4 +1,4 @@
-from investigatinator.enrichment.models import (
+from threatsyft.enrichment.models import (
     InputValidationError,
     classify_target,
     error_response,
