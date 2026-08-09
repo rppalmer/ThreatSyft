@@ -18,7 +18,11 @@ from threatsyft.core import InputValidationError, build_sources, error_response,
 from threatsyft.enrichment.models import classify_indicator
 from threatsyft.fanout import run_sources
 from threatsyft.knowledge.attack import attack_search as run_attack_search
-from threatsyft.knowledge.attack import attack_technique_lookup, normalize_technique_id
+from threatsyft.knowledge.attack import (
+    attack_tactic_lookup,
+    attack_technique_lookup,
+    normalize_technique_id,
+)
 from threatsyft.knowledge.cve import cve_lookup, normalize_cve_id
 from threatsyft.knowledge.kev import kev_lookup
 from threatsyft.knowledge.kev import kev_search as run_kev_search
@@ -30,6 +34,7 @@ SEARCH_TOOL_NAME = "search"
 
 CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 TECHNIQUE_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
+TACTIC_PATTERN = re.compile(r"^TA\d{4}$", re.IGNORECASE)
 
 # How many LOLBAS hits to attach when looking up an ATT&CK technique. This is a
 # supporting cross-reference, not the answer, so it stays small.
@@ -135,6 +140,9 @@ def _classify_reference(value: str) -> tuple[str, str, tuple[tuple[str, Any], ..
             (("nvd", cve_lookup), ("kev", kev_lookup)),
         )
 
+    if TACTIC_PATTERN.fullmatch(value):
+        return "attack_tactic", value.upper(), (("attack", attack_tactic_lookup),)
+
     if TECHNIQUE_PATTERN.fullmatch(value):
         return (
             "attack_technique",
@@ -145,7 +153,13 @@ def _classify_reference(value: str) -> tuple[str, str, tuple[tuple[str, Any], ..
             ),
         )
 
-    return "lolbas_name", value, (("lolbas", lolbas_lookup),)
+    # A bare name could be an ATT&CK tactic ("execution") or a LOLBAS binary
+    # ("Certutil.exe"), and telling them apart up front would mean guessing.
+    # Ask both instead: they are local, fast, and whichever knows the name
+    # answers. That is the same principle the rest of the design follows -
+    # collect from every source that might have it and let the caller see which
+    # one did.
+    return "name", value, (("lolbas", lolbas_lookup), ("attack", attack_tactic_lookup))
 
 
 def _selected_sources(source: str) -> list[str] | None:

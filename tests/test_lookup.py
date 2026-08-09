@@ -27,11 +27,40 @@ def test_lookup_routes_a_technique_to_attack_and_lolbas() -> None:
     assert list(data["sources"]) == ["attack", "lolbas"]
 
 
-def test_lookup_routes_an_unrecognized_name_to_lolbas() -> None:
+def test_lookup_routes_a_tactic_id_to_attack() -> None:
+    data = lookup("TA0002")["data"]
+
+    assert data["reference_type"] == "attack_tactic"
+    assert list(data["sources"]) == ["attack"]
+    assert data["sources"]["attack"]["ok"] is True
+
+
+def test_lookup_asks_both_catalogs_for_a_bare_name() -> None:
+    """A bare name could be a tactic or a LOLBAS binary, so ask both rather than guess."""
     data = lookup("Certutil.exe")["data"]
 
-    assert data["reference_type"] == "lolbas_name"
-    assert list(data["sources"]) == ["lolbas"]
+    assert data["reference_type"] == "name"
+    assert list(data["sources"]) == ["lolbas", "attack"]
+    assert data["sources"]["lolbas"]["ok"] is True
+
+
+def test_lookup_finds_a_tactic_by_name_through_the_same_path() -> None:
+    data = lookup("execution")["data"]
+
+    assert data["reference_type"] == "name"
+    assert data["sources"]["attack"]["ok"] is True
+
+
+@pytest.mark.parametrize("value", ["TA0002", "ta0002", "  TA0002  "])
+def test_tactic_ids_are_case_and_whitespace_insensitive(value) -> None:
+    assert lookup(value)["data"]["sources"]["attack"]["ok"] is True
+
+
+def test_lookup_covers_every_reference_type_it_classifies() -> None:
+    """Each reference type reaches at least one source that can answer it."""
+    for reference in ["T1059", "TA0002", "Certutil.exe", "execution"]:
+        data = lookup(reference)["data"]
+        assert data["source_summary"]["ok"] >= 1, reference
 
 
 def test_lookup_normalizes_the_reference_it_echoes_back() -> None:

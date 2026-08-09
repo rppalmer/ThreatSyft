@@ -96,14 +96,6 @@ It exposes defensive knowledge tools:
 
 - `lookup(reference: str)`
 - `search(query: str, source: str = "all", limit: int = 10)`
-- `attack_technique_lookup(technique_id: str)`
-- `attack_search(query: str, limit: int = 10)`
-- `attack_tactic_lookup(tactic: str)`
-- `cve_lookup(cve_id: str)`
-- `kev_lookup(cve_id: str)`
-- `kev_search(query: str, limit: int = 10)`
-- `lolbas_lookup(name: str)`
-- `lolbas_search(query: str, limit: int = 10)`
 - `extract_iocs(text: str)`
 - `knowledge_status()`
 

@@ -254,6 +254,10 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
                 tactics_by_short_name[tactic.short_name] = tactic
                 tactics_by_alias[tactic.short_name] = tactic
                 tactics_by_alias[_slug(tactic.name)] = tactic
+                # Also findable by its TA#### id, which is how ATT&CK itself
+                # refers to a tactic and the only stable handle for it.
+                if tactic.tactic_id:
+                    tactics_by_alias[_slug(tactic.tactic_id)] = tactic
             continue
 
         if item_type == "attack-pattern":
