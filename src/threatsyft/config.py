@@ -17,6 +17,7 @@ DEFAULT_CISA_KEV_URL = (
 )
 DEFAULT_LOLBAS_URL = "https://lolbas-project.github.io/api/lolbas.json"
 DEFAULT_NVD_BASE_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+DEFAULT_RDAP_BASE_URL = "https://rdap.org"
 DEFAULT_ABUSEIPDB_BASE_URL = "https://api.abuseipdb.com/api/v2"
 DEFAULT_GREYNOISE_BASE_URL = "https://api.greynoise.io/v3/community"
 DEFAULT_VIRUSTOTAL_BASE_URL = "https://www.virustotal.com/api/v3"
@@ -136,6 +137,11 @@ def get_api_key(name: str) -> str | None:
 
     cleaned_value = value.strip()
     return cleaned_value or None
+
+
+def get_rdap_base_url() -> str:
+    """Return the RDAP bootstrap base URL."""
+    return _setting("THREATSYFT_RDAP_BASE_URL", DEFAULT_RDAP_BASE_URL).rstrip("/")
 
 
 def get_abuseipdb_base_url() -> str:

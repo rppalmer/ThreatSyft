@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from time import monotonic
 from typing import Any
 
 import dns.exception
@@ -30,13 +31,29 @@ def dns_lookup(domain: str) -> dict[str, Any]:
 
     query["domain"] = normalized_domain
     resolver = dns.resolver.Resolver()
-    timeout = get_timeout_seconds()
-    resolver.timeout = timeout
-    resolver.lifetime = timeout
+    total_budget = get_timeout_seconds()
+    # ``lifetime`` is per resolve() call, and this loops over five record types,
+    # so setting it to the full timeout makes the worst case five times the
+    # configured value - long enough to exceed a host's own tool timeout and be
+    # cancelled with no result at all. The budget is shared across the whole
+    # lookup instead, and what remains is re-checked before each record.
+    deadline = monotonic() + total_budget
 
     records: dict[str, list[str]] = {record_type: [] for record_type in RECORD_TYPES}
 
     for record_type in RECORD_TYPES:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            return error_response(
+                TOOL_NAME,
+                query,
+                "timeout",
+                "DNS lookup timed out.",
+                {"timeout_seconds": total_budget, "records_completed": _completed(records)},
+            )
+        resolver.timeout = remaining
+        resolver.lifetime = remaining
+
         try:
             answers = resolver.resolve(normalized_domain, record_type)
         except dns.resolver.NXDOMAIN:
@@ -71,6 +88,11 @@ def dns_lookup(domain: str) -> dict[str, Any]:
             "records": records,
         },
     )
+
+
+def _completed(records: dict[str, list[str]]) -> list[str]:
+    """Record types already answered when the budget ran out."""
+    return [record_type for record_type, values in records.items() if values]
 
 
 def _format_dns_answer(record_type: str, answer: object) -> str:

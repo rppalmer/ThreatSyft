@@ -2,8 +2,9 @@ from threatsyft.enrichment import whois as whois_module
 
 
 def test_domain_whois_success(monkeypatch) -> None:
-    def fake_whois(domain: str) -> dict[str, object]:
+    def fake_whois(domain: str, timeout: float | None = None) -> dict[str, object]:
         assert domain == "example.com"
+        assert timeout, "the configured timeout must reach python-whois"
         return {
             "domain_name": "EXAMPLE.COM",
             "registrar": "Example Registrar",
@@ -57,7 +58,7 @@ def test_ip_whois_success(monkeypatch) -> None:
 
 
 def test_whois_lookup_failure(monkeypatch) -> None:
-    def fake_whois(domain: str) -> dict[str, object]:
+    def fake_whois(domain: str, timeout: float | None = None) -> dict[str, object]:
         raise RuntimeError("lookup failed")
 
     monkeypatch.setattr(whois_module.whois, "whois", fake_whois)
@@ -66,3 +67,19 @@ def test_whois_lookup_failure(monkeypatch) -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "upstream_error"
+
+
+def test_domain_whois_passes_the_configured_timeout(monkeypatch) -> None:
+    """Without it python-whois uses its own default and accumulates it per referral hop."""
+    monkeypatch.setenv("THREATSYFT_TIMEOUT_SECONDS", "7")
+    seen = {}
+
+    def fake_whois(domain: str, timeout: float | None = None):
+        seen["timeout"] = timeout
+        return {"domain_name": "example.com"}
+
+    monkeypatch.setattr(whois_module.whois, "whois", fake_whois)
+
+    whois_module.whois_lookup("example.com")
+
+    assert seen["timeout"] == 7.0

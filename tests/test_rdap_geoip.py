@@ -69,3 +69,19 @@ def test_rdap_lookup_malformed_response(monkeypatch) -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "parse_error"
+
+
+def test_rdap_base_url_is_env_overridable(monkeypatch) -> None:
+    """RDAP was the one provider that could not be pointed at a test double."""
+    monkeypatch.setenv("THREATSYFT_RDAP_BASE_URL", "https://rdap.test/base")
+    seen = {}
+
+    def fake_get(url: str, **kwargs):
+        seen["url"] = url
+        raise httpx.ConnectError("stop here")
+
+    monkeypatch.setattr(rdap.httpx, "get", fake_get)
+
+    rdap.rdap_lookup("8.8.8.8")
+
+    assert seen["url"].startswith("https://rdap.test/base/ip/8.8.8.8")

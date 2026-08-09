@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from threatsyft.config import get_timeout_seconds
+from threatsyft.config import get_rdap_base_url, get_timeout_seconds
 from threatsyft.enrichment.http import (
     guarded_get,
     not_found_error,
@@ -21,7 +21,6 @@ from threatsyft.enrichment.models import (
 
 TOOL_NAME = "rdap_lookup"
 PROVIDER = "RDAP"
-RDAP_BASE_URL = "https://rdap.org"
 
 
 def rdap_lookup(target: str) -> dict[str, Any]:
@@ -34,7 +33,7 @@ def rdap_lookup(target: str) -> dict[str, Any]:
         return error_response(TOOL_NAME, query, "invalid_input", str(exc))
 
     query.update({"target": normalized_target, "target_type": target_type})
-    url = f"{RDAP_BASE_URL}/{target_type}/{normalized_target}"
+    url = f"{get_rdap_base_url()}/{target_type}/{normalized_target}"
 
     result = guarded_get(
         TOOL_NAME,

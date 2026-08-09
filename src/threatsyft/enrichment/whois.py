@@ -42,7 +42,10 @@ def whois_lookup(target: str) -> dict[str, Any]:
 
 def _domain_whois_lookup(domain: str, query: dict[str, Any]) -> dict[str, Any]:
     try:
-        record = whois.whois(domain)
+        # Without an explicit timeout python-whois uses its own per-socket
+        # default and accumulates it per referral hop, so a domain with several
+        # referrals ignores the configured budget entirely.
+        record = whois.whois(domain, timeout=get_timeout_seconds())
     except TimeoutError:
         return error_response(TOOL_NAME, query, "timeout", "WHOIS lookup timed out.")
     except Exception as exc:  # python-whois raises broad parser/network exceptions.

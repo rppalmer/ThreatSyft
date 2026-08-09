@@ -1,3 +1,5 @@
+import time
+
 import dns.exception as dns_exception
 import dns.resolver as dns_resolver
 
@@ -26,7 +28,7 @@ class FakeResolver:
 
 
 def test_dns_lookup_success(monkeypatch) -> None:
-    monkeypatch.setattr(dns_module.dns.resolver, "Resolver", FakeResolver)
+    monkeypatch.setattr(dns_resolver, "Resolver", FakeResolver)
 
     result = dns_module.dns_lookup("example.com")
 
@@ -67,3 +69,52 @@ def test_dns_lookup_invalid_input() -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "invalid_input"
+
+
+def test_dns_budget_is_shared_across_record_types_not_per_record(monkeypatch) -> None:
+    """lifetime is per resolve() call, and this resolves five record types.
+
+    Setting it to the full timeout each time makes the worst case five times the
+    configured value, long enough for a host to cancel the call outright.
+    """
+    monkeypatch.setenv("THREATSYFT_TIMEOUT_SECONDS", "10")
+    lifetimes = []
+
+    class FakeResolver:
+        timeout = None
+        lifetime = None
+
+        def resolve(self, domain, record_type):
+            lifetimes.append(self.lifetime)
+            raise dns_resolver.NoAnswer()
+
+    monkeypatch.setattr(dns_resolver, "Resolver", FakeResolver)
+
+    dns_module.dns_lookup("example.com")
+
+    assert lifetimes, "resolver was never called"
+    assert max(lifetimes) <= 10.0
+    assert lifetimes == sorted(lifetimes, reverse=True), "budget must shrink as it is spent"
+    assert sum(1 for value in lifetimes if value == 10.0) <= 1
+
+
+def test_dns_stops_once_the_budget_is_spent(monkeypatch) -> None:
+    monkeypatch.setenv("THREATSYFT_TIMEOUT_SECONDS", "0.05")
+    calls = []
+
+    class SlowResolver:
+        timeout = None
+        lifetime = None
+
+        def resolve(self, domain, record_type):
+            calls.append(record_type)
+            time.sleep(0.06)
+            raise dns_resolver.NoAnswer()
+
+    monkeypatch.setattr(dns_resolver, "Resolver", SlowResolver)
+
+    result = dns_module.dns_lookup("example.com")
+
+    assert result["ok"] is False
+    assert result["error"]["code"] == "timeout"
+    assert len(calls) < len(dns_module.RECORD_TYPES), "should not attempt every record type"
