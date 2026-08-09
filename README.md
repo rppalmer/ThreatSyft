@@ -389,5 +389,5 @@ It does not expose generic command execution, file modification tools, or broad 
 
 For durable design context, see:
 
-- `ARCHITECTURE.md` for MCP server boundaries, long-term architecture, and roadmap.
+- `ARCHITECTURE.md` for MCP server boundaries, the response contract, and the reasoning behind both.
 - `AGENTS.md` for standing instructions to future coding agents.

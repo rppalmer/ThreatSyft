@@ -2,154 +2,111 @@
 
 ThreatSyft exposes focused, read-only security capabilities to an AI client through MCP, keeping the investigation logic in ordinary Python modules. MCP is the only interface; the one console command downloads snapshots, which cannot live behind a tool call without breaking the servers' read-only posture.
 
-The goal is to build a practical guided SOC sidekick: an agent can call tools, explain findings, and help prioritize next steps, but the tool layer should stay explicit, predictable, and safe.
+The consuming agent is the reasoning layer. These tools collect; they do not judge.
 
-## Current Architecture
-
-The current implementation has two MCP servers:
+## The two servers
 
 ```text
-threatsyft-enrichment
-threatsyft-knowledge
+threatsyft-enrichment   holds every API key, spends money
+threatsyft-knowledge    no keys, no metered calls
 ```
 
-Public reporting discovery, article fetching, and summarisation are out of scope and live in the separate net-razor project. ThreatSyft never retrieves content it was not handed; `extract_iocs` operates on text the caller already has. The boundary is strict in both directions: ThreatSyft never calls net-razor and net-razor never calls ThreatSyft. MCP servers expose capabilities and the *client* composes them.
+| Server | Tool | Purpose |
+|---|---|---|
+| enrichment | `enrich(indicator)` | Classify an IP, domain, URL or file hash and fan out concurrently to every source supporting that type. |
+| enrichment | `enrichment_status()` | Which API keys are present. No secret values, no network. |
+| knowledge | `lookup(reference)` | Classify a CVE, ATT&CK technique, ATT&CK tactic, mitigation or LOLBAS name and collect every source covering it. |
+| knowledge | `search(query, source, limit)` | Keyword search across ATT&CK, KEV and LOLBAS, grouped by source. |
+| knowledge | `extract_iocs(text)` | Typed IOC candidates from text the caller already has. No network. |
+| knowledge | `knowledge_status()` | Snapshot readiness. |
 
-It exposes read-only enrichment tools for:
+Six tools. The per-source functions behind them all still exist as ordinary Python and are individually tested; they are simply not exposed as separate tools, because a smaller surface makes tool selection more reliable.
 
-- DNS lookup
-- RDAP lookup
-- WHOIS lookup
-- IP geolocation
-- AbuseIPDB IP reputation
-- GreyNoise IP context
-- VirusTotal IP reports
-- VirusTotal domain reports
-- VirusTotal URL reports
-- VirusTotal file hash reports
-- SecurityTrails domain intelligence
-- Shodan passive host information
-- IPGeolocation.io IP geolocation
-- AlienVault OTX indicator context
-- Google Safe Browsing URL checks
-- Single-call enrichment across every source supporting an indicator type
-- local enrichment provider status checks
+The MCP transports in `src/threatsyft/mcp/` stay thin: register tools, accept explicit inputs, delegate. Core logic lives in `src/threatsyft/enrichment/` and `src/threatsyft/knowledge/`, usable outside MCP including from tests. `core.py` and `fanout.py` sit at the top level because both packages depend on them equally.
 
-`threatsyft-knowledge` exposes local-only defensive knowledge tools for:
+## Where the boundary is
 
-- MITRE ATT&CK Enterprise technique lookup
-- MITRE ATT&CK Enterprise technique search
-- MITRE ATT&CK Enterprise tactic lookup
-- ATT&CK technique knowledge briefs
-- targeted NVD CVE lookup
-- vulnerability knowledge briefs
-- CISA KEV CVE lookup
-- CISA KEV search
-- LOLBAS defensive living-off-the-land lookup
-- LOLBAS search
-- local knowledge snapshot status checks
+Public reporting discovery, article fetching and summarisation are out of scope and live in the separate net-razor project, which already carries the trust class for retrieving content it did not author. ThreatSyft never fetches a URL it is handed.
 
-The MCP transport lives in `src/threatsyft/mcp/enrichment_server.py`. It should remain thin: register tools, accept explicit inputs, and delegate to core modules.
+The boundary is strict in both directions: ThreatSyft never calls net-razor and net-razor never calls ThreatSyft. MCP servers expose capabilities and the *client* composes them. Server-to-server calls would make each a client of the other, with its own config, credentials and failure handling for the peer. Calling third-party HTTP APIs is not a boundary violation; only MCP-to-MCP is.
 
-The knowledge MCP transport lives in `src/threatsyft/mcp/knowledge_server.py` and follows the same thin wrapper pattern.
+This is also the prompt-injection control. The intended flow keeps article text out of any credential-holding step:
 
-Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. These modules should be usable outside MCP, including from tests.
+```text
+fetch node    → net-razor.fetch(url)                 → state["article_text"]
+extract node  → threatsyft.extract_iocs(state[...])  → state["iocs"]   (typed values)
+enrich node   → threatsyft.enrich(ioc) per ioc
+```
 
-All tools return the shared JSON envelope:
+Separating the node that reads untrusted content from the node holding credentials, and passing typed values between them, falls out of the architecture rather than being a control someone has to remember to apply. It only works *because* the boundary is strict.
+
+## The response contract
+
+Every tool returns the same envelope:
 
 ```json
-{
-  "ok": true,
-  "tool": "dns_lookup",
-  "query": {},
-  "data": {},
-  "error": null
-}
+{"ok": true, "tool": "enrich", "query": {}, "data": {}, "error": null}
 ```
 
-Errors use the same shape:
+Errors use the same shape with `ok: false`, `data: null`, and `error` carrying `code`, `message` and optional `details`.
+
+### One `sources` map across `enrich`, `lookup` and `search`
+
+All three collection tools return results the same way, so a caller written against one iterates the others unchanged:
 
 ```json
-{
-  "ok": false,
-  "tool": "dns_lookup",
-  "query": {},
-  "data": null,
-  "error": {
-    "code": "invalid_input",
-    "message": "Domain must not be empty.",
-    "details": null
-  }
-}
+{"data": {
+  "indicator_type": "ip",
+  "source_summary": {"ok": 3, "failed": 1},
+  "sources": {
+    "abuseipdb":  {"ok": true,  "data": {}},
+    "virustotal": {"ok": false, "code": "rate_limited", "message": "..."}
+  }}}
 ```
 
-## Long-Term MCP Direction
+Every entry has the same shape whether it succeeded or not, so a consumer iterates one structure instead of correlating a results map against an errors list. `source_summary` lets a node answer "did anything work?" without iterating. The type is echoed back so an agent that guessed wrong can self-correct. Source ordering is fixed and independent of which source answers first.
 
-ThreatSyft should build toward three focused MCP servers.
+### `ok: false` means the caller must change something
 
-### `threatsyft-enrichment`
+| Situation | Result |
+|---|---|
+| Input invalid or unclassifiable | `ok: false`, `invalid_input` |
+| Right input, wrong tool | `ok: false`, `invalid_input`, with `details.suggested_tool` |
+| Some sources failed | `ok: true`, failures attributed per source |
+| **Every** source failed | `ok: true`, `source_summary.ok == 0` |
 
-Answers: what do external sources know about this indicator?
+"I asked four sources and all four failed" is a successful execution with an informative result, not a tool error. For a retrying agent, `ok: false` should mean "you did something wrong", not "the world had no data", which retrying will not fix.
 
-Examples:
+### No verdict, anywhere
 
-- DNS, RDAP, WHOIS, and geolocation
-- VirusTotal, AbuseIPDB, Shodan, GreyNoise, SecurityTrails, AlienVault OTX, Google Safe Browsing
-- `enrich`, which fans out to every source supporting the indicator's type
+Parallel fetch is fine; scoring is not. `enrich` calls many sources at once and reports what each returned, and deliberately produces no overall verdict or confidence score. Such a value silently changes meaning when one provider rate-limits — the same indicator scores differently because of a 429 rather than because of evidence — and the caller cannot see that happen. A provider's own verdict field passes through untouched; nothing is aggregated.
 
-### `threatsyft-knowledge`
+### Responses stay small by default, and stay navigable
 
-Answers: what known security concepts, techniques, vulnerabilities, or references apply?
+Large fields are trimmed to identity rather than hidden behind a verbosity flag. A technique returns its mitigations as `{id, name, url}`; the full write-up is `lookup("M1038")` away. A flag would make the model choose how much detail it wants before seeing any, so it would either always ask for everything or guess.
 
-Examples:
+### Snapshot age rides along
 
-- MITRE ATT&CK
-- CVEs
-- CISA KEV
-- LOLBAS and living-off-the-land references
-- defensive tradecraft and detection context
-- behavior-to-technique mapping
+Every snapshot-backed source reports its age and whether that age is past a per-source threshold — 14 days for KEV, which CISA updates most weeks, 180 for ATT&CK and LOLBAS, which change a few times a year. This applies on the failure path especially: "this CVE is not in KEV" reads as "not known to be exploited", when on a stale catalog the honest claim is "not exploited as of whenever this last refreshed".
 
+Age is reported, never enforced. Refusing to answer past a threshold would break the offline case the snapshots exist for.
 
-Most runtime knowledge lookups are local-only. `cve_lookup` is intentionally live-network because a full CVE mirror is too large for this simple v1 project. Explicit update commands are responsible for downloading or refreshing local snapshots.
+## Boundary guidance
 
-## Boundary Guidance
-
-Keep server boundaries tied to the question each tool answers. Do not add more MCP servers unless a new capability has meaningfully different behavior or maintenance needs.
-
-When adding future capabilities, choose the boundary based on the question the tool answers:
+Keep server boundaries tied to the question each tool answers. Do not add more MCP servers unless a capability has meaningfully different behaviour or maintenance needs.
 
 - Indicator facts and provider reputation belong in enrichment.
 - Stable references and defensive knowledge belong in knowledge.
-- Fresh public reporting and article processing belong in net-razor, not here. General rule: put the capability where the trust class already exists.
+- Fresh public reporting and article processing belong in net-razor. General rule: put the capability where the trust class already exists.
 
-The agent is the reasoning layer. MCP tools should provide reliable facts, compact summaries, and safe actions.
+Knowledge lookups read local snapshots. The NVD CVE API is the one live call, because a full CVE mirror is too large to keep locally. Snapshot downloads are the job of `threatsyft-update`.
 
-Parallel fetch is fine; scoring is not. `enrich` calls many sources at once and reports what each returned, with fixed source ordering. It deliberately produces no overall verdict and no confidence score: such a value silently changes meaning when one provider rate-limits, and the caller cannot see that happen. The agent remains responsible for interpretation, caveats, follow-up questions, and written summaries.
-
-## Safety Posture
+## Safety posture
 
 ThreatSyft is defensive by default.
 
-In scope:
+In scope: enrichment, triage, technique mapping, detection- and mitigation-oriented explanation, IOC extraction from text, current vulnerability and KEV context.
 
-- enrichment
-- triage
-- technique mapping
-- detection-oriented explanation
-- mitigation-oriented explanation
-- IOC extraction from public reporting
-- current vulnerability and KEV context
+Out of scope unless deliberately reconsidered: generic command execution, credential handling beyond local API key configuration, exploit generation, payload generation, EDR bypass instructions, offensive automation, active scanning or probing, submitting reports or changing third-party state.
 
-Out of scope unless deliberately reconsidered:
-
-- generic command execution
-- credential handling beyond local API key configuration
-- exploit generation
-- payload generation
-- EDR bypass instructions
-- offensive automation
-- active scanning or probing
-- submitting reports or changing third-party state
-
-Any future active capability should require a separate architecture review and explicit user approval.
+Any future active capability requires a separate architecture review and explicit approval.

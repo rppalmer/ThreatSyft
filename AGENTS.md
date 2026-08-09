@@ -4,8 +4,8 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 
 ## Read First
 
-- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture (including the API-backed provider roadmap).
-- Read `TODO.md` first if it is present. It is a local, unpublished working file and the source of truth for the in-progress architecture rework: the target design, the agreed decisions, the response contracts, and which phase is current. Nothing in it is guaranteed to be reflected in the tracked docs yet.
+- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, or project structure. It carries the response contract and the reasoning behind it.
+- Read `TODO.md` first if it is present. It is a local, unpublished working file listing outstanding work only. Anything not in it is either done or deliberately not being done.
 - Use `README.md` for the current user-facing overview and development commands.
 
 ## Standing Rules
@@ -21,13 +21,15 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 - Keep tests mocked by default for external providers so normal test runs do not require live network access or API keys.
 - Treat attacker techniques, living-off-the-land behavior, and EDR evasion content as defensive knowledge only: understanding, mapping, detection, triage, and mitigation are in scope; offensive automation and bypass generation are out of scope.
 
-## Current Direction
+## The Architecture
 
-Build toward two focused MCP servers:
+Two MCP servers, six tools:
 
-- `threatsyft-enrichment`: indicator enrichment and vendor API lookups.
-- `threatsyft-knowledge`: MITRE ATT&CK, CVEs, CISA KEV, LOLBAS, living-off-the-land, defensive tradecraft knowledge, and local IOC extraction from text.
+- `threatsyft-enrichment` holds every API key: `enrich`, `enrichment_status`.
+- `threatsyft-knowledge` holds none: `lookup`, `search`, `extract_iocs`, `knowledge_status`.
 
-Current public write-ups, article fetching, and summarisation belong to the separate net-razor project, which already carries the trust class for retrieving content it did not author.
+The per-source functions behind those tools still exist as ordinary Python and are individually tested. They are not exposed as separate tools, because a smaller surface makes tool selection more reliable. Adding a tool needs a reason that `enrich`, `lookup` or `search` cannot cover.
 
-Do not split servers before the behavior justifies it. The current implementation should continue using the existing enrichment server while the project is small.
+Public write-ups, article fetching, and summarisation belong to the separate net-razor project, which already carries the trust class for retrieving content it did not author. ThreatSyft never fetches a URL it is handed, and the two projects never call each other.
+
+Do not split servers further before the behaviour justifies it.
