@@ -20,5 +20,6 @@ def test_knowledge_mcp_server_registers_expected_tools() -> None:
         "kev_search",
         "lolbas_lookup",
         "lolbas_search",
+        "extract_iocs",
         "knowledge_status",
     ]

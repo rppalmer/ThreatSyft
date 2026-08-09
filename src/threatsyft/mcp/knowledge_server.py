@@ -19,6 +19,7 @@ from threatsyft.knowledge.cve import cve_lookup as run_cve_lookup
 from threatsyft.knowledge.d3fend import attack_defense_mapping as run_attack_defense_mapping
 from threatsyft.knowledge.d3fend import d3fend_lookup as run_d3fend_lookup
 from threatsyft.knowledge.d3fend import d3fend_search as run_d3fend_search
+from threatsyft.knowledge.iocs import extract_iocs as run_extract_iocs
 from threatsyft.knowledge.kev import kev_lookup as run_kev_lookup
 from threatsyft.knowledge.kev import kev_search as run_kev_search
 from threatsyft.knowledge.lolbas import lolbas_lookup as run_lolbas_lookup
@@ -31,9 +32,10 @@ mcp = FastMCP(
         "Defensive security knowledge tools for stable references and vulnerability context. "
         "Use this server for ATT&CK techniques and tactics, D3FEND defensive mappings, "
         "CISA KEV, LOLBAS, targeted CVE metadata, and compact defensive briefs. Most "
-        "runtime lookups are local-only; cve_lookup uses the live NVD CVE API. Do not "
-        "use knowledge_status for RSS feeds, news sources, or public research feed "
-        "configuration; use the research server for current public reporting."
+        "runtime lookups are local-only; cve_lookup uses the live NVD CVE API. "
+        "extract_iocs pulls typed IOC candidates out of text you already have; it does "
+        "no network access and does not fetch URLs. This server does not discover or "
+        "retrieve public reporting."
     ),
 )
 
@@ -117,8 +119,14 @@ def lolbas_search(query: str, limit: int = 10) -> dict[str, Any]:
 
 
 @mcp.tool()
+def extract_iocs(text: str) -> dict[str, Any]:
+    """Extract typed IOC candidates from text you already have. No network access."""
+    return run_extract_iocs(text)
+
+
+@mcp.tool()
 def knowledge_status() -> dict[str, Any]:
-    """Check ATT&CK, D3FEND, KEV, LOLBAS, and NVD readiness; not RSS feeds."""
+    """Check ATT&CK, D3FEND, KEV, LOLBAS, and NVD snapshot readiness."""
     return run_knowledge_status()
 
 

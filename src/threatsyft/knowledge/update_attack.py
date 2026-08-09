@@ -10,6 +10,7 @@ import httpx
 
 from threatsyft.config import get_attack_stix_path, get_attack_stix_url, get_timeout_seconds
 from threatsyft.core import error_response, success_response
+from threatsyft.knowledge.snapshot_cache import write_snapshot
 
 TOOL_NAME = "attack_snapshot_update"
 
@@ -69,8 +70,7 @@ def update_attack_snapshot() -> dict[str, Any]:
             "ATT&CK STIX download must contain an objects list.",
         )
 
-    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    snapshot_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_snapshot(snapshot_path, payload)
 
     return success_response(
         TOOL_NAME,

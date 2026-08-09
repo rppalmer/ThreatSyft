@@ -3,8 +3,8 @@
 This is the project-wide contract every MCP tool speaks: the stable
 ``{ok, tool, query, data, error}`` envelope and the ``InputValidationError``
 raised during input validation. It lives in a neutral top-level module rather
-than under ``enrichment/`` because the knowledge and research tools depend on it
-just as much as enrichment does.
+than under ``enrichment/`` because the knowledge tools depend on it just as much
+as enrichment does.
 """
 
 from __future__ import annotations

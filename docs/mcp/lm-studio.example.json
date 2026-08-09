@@ -5,9 +5,6 @@
     },
     "threatsyft-knowledge": {
       "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
-    },
-    "threatsyft-research": {
-      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }

@@ -2,7 +2,9 @@
 
 ThreatSyft is a console-first Python security sidekick. It exposes focused tools through local MCP servers so an AI client, such as VS Code with MCP support, can request structured security context without getting unsafe general-purpose access to the machine.
 
-The current implementation has an enrichment server for indicator context, a knowledge server for defensive ATT&CK, D3FEND, CVE, KEV, and LOLBAS context, and a research server for public threat-report discovery. All three keep core logic separate from the MCP transport layer.
+The current implementation has an enrichment server for indicator context and a knowledge server for defensive ATT&CK, D3FEND, CVE, KEV, and LOLBAS context, plus local IOC extraction. Both keep core logic separate from the MCP transport layer.
+
+Public threat-report discovery, article fetching, and summarisation are deliberately **not** here. They belong to the separate net-razor project, which already owns retrieving content it did not author. ThreatSyft never fetches a URL you hand it; `extract_iocs` works on text you already have.
 
 ## What It Does
 
@@ -41,9 +43,7 @@ ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common
 - Local LOLBAS search
 - Local knowledge snapshot status checks
 - Explicit knowledge snapshot updates from the CLI
-- Curated public security feed search
-- Public article metadata and snippet extraction
-- Public article IOC extraction
+- Local IOC extraction from text
 
 Each tool has one explicit job and returns a structured JSON response with a stable envelope:
 
@@ -116,24 +116,14 @@ It exposes defensive knowledge tools:
 - `kev_search(query: str, limit: int = 10)`
 - `lolbas_lookup(name: str)`
 - `lolbas_search(query: str, limit: int = 10)`
+- `extract_iocs(text: str)`
 - `knowledge_status()`
-
-The research MCP server is defined in `src/threatsyft/mcp/research_server.py`.
-
-It exposes public threat-report research tools:
-
-- `research_feed_search(query: str = "", limit: int = 10, days: int = 14)`
-- `research_feed_status()`
-- `research_article_summary(url: str)`
-- `research_article_iocs(url: str)`
-- `research_brief(url: str)`
 
 Each MCP server is a plain stdio server. After installing the package, start them with stable console commands:
 
 ```bash
 threatsyft-enrichment-mcp
 threatsyft-knowledge-mcp
-threatsyft-research-mcp
 ```
 
 For repository-local development, VS Code also includes `.vscode/mcp.json` entries that start the same servers from the project virtual environment:
@@ -141,10 +131,9 @@ For repository-local development, VS Code also includes `.vscode/mcp.json` entri
 ```bash
 .venv/bin/python -m threatsyft.mcp.enrichment_server
 .venv/bin/python -m threatsyft.mcp.knowledge_server
-.venv/bin/python -m threatsyft.mcp.research_server
 ```
 
-The MCP layers are deliberately thin. They register tools and pass requests to core modules. Enrichment logic lives under `src/threatsyft/enrichment/`, knowledge logic lives under `src/threatsyft/knowledge/`, and public research logic lives under `src/threatsyft/research/`.
+The MCP layers are deliberately thin. They register tools and pass requests to core modules. Enrichment logic lives under `src/threatsyft/enrichment/` and knowledge logic lives under `src/threatsyft/knowledge/`.
 
 ## Tool Overview
 
@@ -509,37 +498,15 @@ Returned data includes compact ranked matches with entry name, categories, ATT&C
 
 Checks local knowledge snapshot availability without calling external providers.
 
-Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for `cve_lookup`. It does not print secret values and does not report RSS feeds, news sources, or research feed configuration.
+Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for `cve_lookup`. It does not print secret values.
 
-### `research_feed_search(query: str = "", limit: int = 10, days: int = 14)`
+### `extract_iocs(text: str)`
 
-Searches configured public security RSS feeds using live network calls.
+Extracts typed IOC candidates from text you already have. No network access; it does not fetch URLs.
 
-Returned data includes matching feed entries, source URLs, published timestamps when available, short matched context, cautious zero-result interpretation, and per-feed errors when one source fails but another succeeds.
+Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values only), `ioc_counts`, and `untrusted_context`. It handles common defanged forms such as `hxxp://example[.]com`.
 
-### `research_feed_status()`
-
-Lists configured research RSS or Atom feed URLs without fetching them.
-
-Returned data includes configured feed URLs, feed count, configuration source, and `live_network: false`.
-
-### `research_article_summary(url: str)`
-
-Fetches one public HTTP or HTTPS article URL and returns metadata plus short snippets.
-
-Returned data includes title, description, published timestamp when available, lead snippets, and `full_text_returned: false`. It rejects non-HTTP URLs, localhost, and private or reserved IP-literal hosts.
-
-### `research_article_iocs(url: str)`
-
-Fetches one public HTTP or HTTPS article URL and extracts local IOC candidates.
-
-Returned data includes IPs, domains, URLs, file hashes, CVE IDs, small context snippets, and `full_text_returned: false`. It handles common defanged forms such as `hxxp://example[.]com`.
-
-### `research_brief(url: str)`
-
-Builds a compact deterministic research fact pack for one public article URL.
-
-Returned data includes article metadata, snippets, extracted IOCs, IOC counts, key points, suggested next pivots, workflow guidance, source results, and source errors. Suggested pivots name follow-up tools such as `ip_reputation`, `domain_reputation`, `url_reputation`, `file_reputation`, and `vulnerability_brief`, but the brief does not call those tools automatically. The workflow guidance tells agents not to repeat article summary or IOC extraction for the same URL after a successful brief.
+`iocs` carries values only so a caller can iterate it and feed the values straight to an enrichment tool. The surrounding source text stays under `untrusted_context`, keyed by IOC value, and is never merged into a server-authored field — a caller can drop that key entirely without losing any indicator.
 
 ## Project Layout
 
@@ -572,17 +539,13 @@ Returned data includes article metadata, snippets, extracted IOCs, IOC counts, k
 │       ├── knowledge/
 │       │   ├── attack.py
 │       │   ├── d3fend.py
+│       │   ├── iocs.py
 │       │   ├── kev.py
 │       │   ├── lolbas.py
 │       │   └── update_attack.py
-│       ├── research/
-│       │   ├── articles.py
-│       │   ├── feeds.py
-│       │   └── iocs.py
 │       └── mcp/
 │           ├── enrichment_server.py
-│           ├── knowledge_server.py
-│           └── research_server.py
+│           └── knowledge_server.py
 └── tests/
 ```
 
@@ -602,8 +565,6 @@ The current version supports these environment variables:
 - `THREATSYFT_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
 - `THREATSYFT_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.threatsyft/knowledge/lolbas/lolbas.json`.
 - `THREATSYFT_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
-- `THREATSYFT_RESEARCH_FEEDS`: comma- or newline-separated public RSS/Atom feed URLs for `research_feed_search`. Defaults to BleepingComputer News and Google Cloud Threat Intelligence.
-- `THREATSYFT_RESEARCH_USER_AGENT`: user agent used by research HTTP requests. Defaults to `ThreatSyft/1.0`.
 - `ABUSEIPDB_API_KEY`: API key for `abuseipdb_check_ip`.
 - `GREYNOISE_API_KEY`: API key for `greynoise_ip_context`.
 - `VIRUSTOTAL_API_KEY`: API key for VirusTotal IP, domain, URL, and file reports.
@@ -615,19 +576,6 @@ The current version supports these environment variables:
 - `NVD_API_KEY`: optional API key for `cve_lookup`.
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
-
-For easier feed editing, use a quoted multiline value:
-
-```env
-THREATSYFT_RESEARCH_FEEDS="
-https://feeds.feedburner.com/TheHackersNews
-https://www.recordedfuture.com/category/cyber/feed/
-https://www.anomali.com/site/blog-rss
-https://www.cisecurity.org/feed/advisories
-https://www.cisa.gov/automated-https:indicator-sharing-ais
-https://isc.sans.edu/rssfeed_full.xml
-"
-```
 
 ## Host Compatibility
 
@@ -655,9 +603,6 @@ LM Studio and Cursor use a Cursor-style `mcp.json` with a top-level
     },
     "threatsyft-knowledge": {
       "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
-    },
-    "threatsyft-research": {
-      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }
@@ -675,10 +620,6 @@ VS Code uses `.vscode/mcp.json` with a top-level `servers` object:
     "threatsyft-knowledge": {
       "type": "stdio",
       "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
-    },
-    "threatsyft-research": {
-      "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }
@@ -842,10 +783,9 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft vulnerability_brief on CVE-2024-3400 and summarize the NVD and KEV evidence.`
 - `Use ThreatSyft kev_search for MOVEit with a limit of 5.`
 - `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
-- `Use ThreatSyft research_feed_search for ransomware with a limit of 5.`
-- `Use ThreatSyft research_brief on https://example.com/report. Summarize the returned fact pack and do not call the research tools again for that same URL unless I ask you to refresh it.`
+- `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 
-Use provider-specific tools when you need raw provider detail or want to isolate one data source. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use the research tools for recent public reporting context or IOC extraction from a known article URL.
+Use provider-specific tools when you need raw provider detail or want to isolate one data source. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
 
 ## Troubleshooting
 

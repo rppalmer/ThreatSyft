@@ -7,10 +7,6 @@
     "threatsyft-knowledge": {
       "type": "stdio",
       "command": "/absolute/path/to/.venv/bin/threatsyft-knowledge-mcp"
-    },
-    "threatsyft-research": {
-      "type": "stdio",
-      "command": "/absolute/path/to/.venv/bin/threatsyft-research-mcp"
     }
   }
 }

@@ -1,4 +1,4 @@
-"""Local IOC extraction helpers for public research articles."""
+"""Local IOC extraction from arbitrary untrusted text. No network."""
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ import re
 from collections import defaultdict
 from typing import Any
 
+from threatsyft.core import error_response, success_response
+
+TOOL_NAME = "extract_iocs"
 IPV4_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 CVE_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 HASH_PATTERN = re.compile(r"\b[a-fA-F0-9]{32}\b|\b[a-fA-F0-9]{40}\b|\b[a-fA-F0-9]{64}\b")
@@ -20,7 +23,18 @@ MAX_CONTEXTS_PER_IOC = 3
 
 
 def extract_iocs(text: str) -> dict[str, Any]:
-    """Extract normalized IOCs from article text."""
+    """Extract typed IOC candidates from arbitrary text.
+
+    ``iocs`` carries values only, so a caller can iterate it and feed the values
+    straight to an enrichment tool. The surrounding source text is untrusted and
+    is kept apart under ``untrusted_context``, keyed by IOC value, never merged
+    into a server-authored field. A caller can drop that key entirely without
+    losing any indicator.
+    """
+    query = {"text_length": len(text)}
+    if not text.strip():
+        return error_response(TOOL_NAME, query, "invalid_input", "Text to scan is required.")
+
     normalized_text = normalize_defanged_text(text)
     grouped: dict[str, dict[str, list[str]]] = {
         "ips": defaultdict(list),
@@ -36,7 +50,22 @@ def extract_iocs(text: str) -> dict[str, Any]:
     _collect_matches(grouped["cves"], normalized_text, CVE_PATTERN, _normalize_cve)
     _collect_matches(grouped["domains"], normalized_text, DOMAIN_PATTERN, _normalize_domain)
 
-    return {ioc_type: _ioc_items(values) for ioc_type, values in grouped.items()}
+    iocs: dict[str, list[dict[str, str]]] = {}
+    untrusted_context: dict[str, list[str]] = {}
+    for ioc_type, values in grouped.items():
+        retained = sorted(values.items())[:MAX_ITEMS_PER_TYPE]
+        iocs[ioc_type] = [{"value": value} for value, _ in retained]
+        untrusted_context.update(retained)
+
+    return success_response(
+        TOOL_NAME,
+        query,
+        {
+            "iocs": iocs,
+            "ioc_counts": {ioc_type: len(items) for ioc_type, items in iocs.items()},
+            "untrusted_context": untrusted_context,
+        },
+    )
 
 
 def normalize_defanged_text(text: str) -> str:
@@ -90,13 +119,6 @@ def _normalize_cve(value: str) -> str | None:
 def _normalize_domain(value: str) -> str | None:
     domain = value.lower().rstrip(".,;:!?)]}")
     return domain
-
-
-def _ioc_items(values: dict[str, list[str]]) -> list[dict[str, Any]]:
-    return [
-        {"value": value, "contexts": contexts}
-        for value, contexts in sorted(values.items())[:MAX_ITEMS_PER_TYPE]
-    ]
 
 
 def _context(text: str, start: int, end: int) -> str:

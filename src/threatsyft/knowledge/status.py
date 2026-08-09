@@ -68,11 +68,6 @@ def knowledge_status() -> dict[str, Any]:
             "local_only": True,
             "network_checked": False,
             "scope": "ATT&CK, D3FEND, CISA KEV, LOLBAS, and NVD CVE lookup readiness.",
-            "does_not_report": [
-                "RSS feeds",
-                "news sources",
-                "research feed configuration",
-            ],
             "ready": not unavailable,
             "unavailable_snapshots": unavailable,
             "snapshots": snapshots,

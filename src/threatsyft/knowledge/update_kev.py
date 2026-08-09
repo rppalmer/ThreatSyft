@@ -10,6 +10,7 @@ import httpx
 
 from threatsyft.config import get_cisa_kev_path, get_cisa_kev_url, get_timeout_seconds
 from threatsyft.core import error_response, success_response
+from threatsyft.knowledge.snapshot_cache import write_snapshot
 
 TOOL_NAME = "kev_snapshot_update"
 
@@ -69,8 +70,7 @@ def update_kev_snapshot() -> dict[str, Any]:
             "CISA KEV download must contain a vulnerabilities list.",
         )
 
-    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    snapshot_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_snapshot(snapshot_path, payload)
 
     return success_response(
         TOOL_NAME,

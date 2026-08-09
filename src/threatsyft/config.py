@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 DEFAULT_TIMEOUT_SECONDS = 15.0
 DEFAULT_ATTACK_STIX_URL = (
@@ -31,13 +30,35 @@ DEFAULT_SECURITYTRAILS_BASE_URL = "https://api.securitytrails.com/v1"
 DEFAULT_IPGEOLOCATION_BASE_URL = "https://api.ipgeolocation.io"
 DEFAULT_ALIENVAULT_BASE_URL = "https://otx.alienvault.com/api/v1"
 DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL = "https://safebrowsing.googleapis.com"
-DEFAULT_RESEARCH_FEEDS = (
-    "https://www.bleepingcomputer.com/feed/,"
-    "https://cloud.google.com/blog/topics/threat-intelligence/rss"
-)
-DEFAULT_RESEARCH_USER_AGENT = "ThreatSyft/1.0"
 
-load_dotenv()
+
+def _load_environment() -> None:
+    """Load ``.env`` from the working directory and from a fixed home location.
+
+    The previous ``load_dotenv()`` call found nothing when an MCP host launched
+    the server, so every keyed tool reported a missing API key. A bare call
+    resolves its search root by inspecting the *calling frame*, meaning it walks
+    up from wherever this module happens to live: the repository for an editable
+    install, site-packages otherwise. It looked like it worked because local
+    development is the editable case. None of the documented host configurations
+    set ``cwd``, and none of them install editable.
+
+    Two explicit locations replace that guesswork. ``find_dotenv(usecwd=True)``
+    really does search the working directory, so a project-local file keeps
+    working during development, and ``~/.threatsyft/.env`` is a fixed path that
+    resolves the same no matter where the host starts the process.
+
+    ``load_dotenv`` never overwrites a variable that is already set, so
+    precedence runs: real process environment, then a ``.env`` at or above the
+    working directory, then ``~/.threatsyft/.env``.
+    """
+    working_directory_env = find_dotenv(usecwd=True)
+    if working_directory_env:
+        load_dotenv(working_directory_env)
+    load_dotenv(Path.home().joinpath(".threatsyft", ".env"))
+
+
+_load_environment()
 
 
 def get_timeout_seconds() -> float:
@@ -191,25 +212,6 @@ def get_google_safebrowsing_base_url() -> str:
     ).rstrip("/")
 
 
-def get_research_feeds() -> list[str]:
-    """Return configured research RSS feed URLs."""
-    raw_value = os.getenv("THREATSYFT_RESEARCH_FEEDS", DEFAULT_RESEARCH_FEEDS)
-    return _split_research_feeds(raw_value)
-
-
-def research_feeds_source() -> str:
-    """Return whether research feeds came from the environment or defaults."""
-    if os.getenv("THREATSYFT_RESEARCH_FEEDS") is None:
-        return "default"
-    return "environment"
-
-
-def get_research_user_agent() -> str:
-    """Return the user agent used for public research fetches."""
-    value = os.getenv("THREATSYFT_RESEARCH_USER_AGENT", DEFAULT_RESEARCH_USER_AGENT).strip()
-    return value or DEFAULT_RESEARCH_USER_AGENT
-
-
 def knowledge_update_command(source: str) -> str:
     """Return the console command for refreshing one knowledge snapshot."""
     return f"threatsyft knowledge-update {source}"
@@ -220,8 +222,3 @@ def _knowledge_path(env_name: str, *relative_parts: str) -> Path:
     if raw_value:
         return Path(raw_value)
     return Path.home().joinpath(".threatsyft", "knowledge", *relative_parts)
-
-
-def _split_research_feeds(raw_value: str) -> list[str]:
-    """Split comma- or newline-separated feed URLs."""
-    return [item.strip() for item in re.split(r"[,\r\n]+", raw_value) if item.strip()]

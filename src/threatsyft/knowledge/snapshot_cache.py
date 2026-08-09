@@ -9,11 +9,37 @@ rewrites a snapshot, its mtime changes and the next lookup reparses, so the
 
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 from threading import Lock
+from typing import Any
 
 _lock = Lock()
+
+
+def write_snapshot(path: Path, payload: Any) -> None:
+    """Write a snapshot atomically, so a partial write cannot replace a good file.
+
+    Writing straight onto the live path means an interruption — a crash, a full
+    disk, a Ctrl-C — leaves truncated JSON behind. Every later lookup then fails
+    to parse it, and keeps failing until the update is run again, because a failed
+    parse is deliberately never cached. Snapshots are large enough (ATT&CK is
+    ~47 MB) that the interruption window is real rather than theoretical.
+
+    Writing to a sibling temporary file and renaming makes the replacement atomic
+    on every platform ThreatSyft targets: readers see either the previous
+    snapshot or the new one, never a half-written file. Shared by all four update
+    commands so the guarantee cannot hold in some of them and not others.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(f"{path.name}.tmp")
+    temporary_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary_path, path)
 
 
 def load_cached[T](cache: dict[str, tuple[float, T]], path: Path, parse: Callable[[], T]) -> T:

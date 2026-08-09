@@ -1,8 +1,16 @@
-certifi
-mcp[cli]
-dnspython
-httpx
-ipwhois
-pydantic
-python-dotenv
-python-whois
+# Upper bounds are deliberate: mcp 2.0.0 is a major rework of the SDK, and an
+# unpinned dependency across a known-breaking release means a fresh install is a
+# different program than the one that was tested.
+#
+# The [cli] extra is intentionally absent. It pulls typer, rich, uvicorn,
+# starlette, sse-starlette, python-multipart, PyJWT and cryptography to support
+# the `mcp` command-line tool, none of which these stdio servers use.
+mcp>=1.28,<2
+
+certifi>=2026.6.17
+dnspython>=2.8,<3
+httpx>=0.28,<0.29
+ipwhois>=1.3,<2
+pydantic>=2.13,<3
+python-dotenv>=1.2,<2
+python-whois>=0.9.6,<0.10

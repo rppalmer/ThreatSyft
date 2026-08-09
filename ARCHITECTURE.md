@@ -6,13 +6,14 @@ The goal is to build a practical guided SOC sidekick: an agent can call tools, e
 
 ## Current Architecture
 
-The current implementation has three MCP servers:
+The current implementation has two MCP servers:
 
 ```text
 threatsyft-enrichment
 threatsyft-knowledge
-threatsyft-research
 ```
+
+Public reporting discovery, article fetching, and summarisation are out of scope and live in the separate net-razor project. ThreatSyft never retrieves content it was not handed; `extract_iocs` operates on text the caller already has. The boundary is strict in both directions: ThreatSyft never calls net-razor and net-razor never calls ThreatSyft. MCP servers expose capabilities and the *client* composes them.
 
 It exposes read-only enrichment tools for:
 
@@ -54,21 +55,11 @@ It exposes read-only enrichment tools for:
 - LOLBAS search
 - local knowledge snapshot status checks
 
-`threatsyft-research` exposes live-network public research tools for:
-
-- curated security feed search
-- configured research feed status checks
-- public article metadata and snippet extraction
-- public article IOC extraction
-- public article research briefs with suggested pivots
-
 The MCP transport lives in `src/threatsyft/mcp/enrichment_server.py`. It should remain thin: register tools, accept explicit inputs, and delegate to core modules.
 
 The knowledge MCP transport lives in `src/threatsyft/mcp/knowledge_server.py` and follows the same thin wrapper pattern.
 
-The research MCP transport lives in `src/threatsyft/mcp/research_server.py` and follows the same thin wrapper pattern.
-
-Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. Core research logic lives under `src/threatsyft/research/`. These modules should be usable outside MCP, including from tests, future CLI commands, or future aggregate analysis functions.
+Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. These modules should be usable outside MCP, including from tests, future CLI commands, or future aggregate analysis functions.
 
 All tools return the shared JSON envelope:
 
@@ -129,22 +120,6 @@ The current knowledge MVP implements MITRE ATT&CK Enterprise lookups using a loc
 
 Most runtime knowledge lookups are local-only. `cve_lookup` is intentionally live-network because a full CVE mirror is too large for this simple v1 project. Explicit update commands are responsible for downloading or refreshing local snapshots.
 
-### `threatsyft-research`
-
-Answers: what new public information exists, and what can be safely extracted or summarized from it?
-
-Examples:
-
-- searching recent security write-ups
-- summarizing attacks
-- extracting IOCs from articles
-- mapping write-ups to ATT&CK techniques
-- comparing new reporting against curated knowledge
-
-The current research MVP implements curated RSS feed search, public article metadata/snippet extraction, local IOC extraction from public article URLs, and single-article research briefs. It is stateless, does not run JavaScript, does not use a search API, and does not return full article bodies.
-
-A future `research_attack_cluster(article_url)` capability should support open-web discovery for similar public reporting. Curated feeds are useful for v1, but they are not the long-term ceiling because emerging-threat reporting can appear from unpredictable vendors, researchers, CERTs, and niche blogs. Before adding open-web search, add explicit safeguards: search-provider APIs instead of uncontrolled crawling, capped fetch counts, URL safety validation, no JavaScript execution, no paywall or authentication bypass, snippets-only output, source/fetch metadata, prompt-injection-aware handling of page text, and capped or explicit enrichment of extracted IOCs.
-
 ## Boundary Guidance
 
 Keep server boundaries tied to the question each tool answers. Do not add more MCP servers unless a new capability has meaningfully different behavior or maintenance needs.
@@ -153,7 +128,7 @@ When adding future capabilities, choose the boundary based on the question the t
 
 - Indicator facts and provider reputation belong in enrichment.
 - Stable references and defensive knowledge belong in knowledge.
-- Fresh public reporting and article processing belong in research.
+- Fresh public reporting and article processing belong in net-razor, not here. General rule: put the capability where the trust class already exists.
 
 The agent is the reasoning layer. MCP tools should provide reliable facts, compact summaries, and safe actions.
 

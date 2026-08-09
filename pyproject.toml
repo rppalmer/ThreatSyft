@@ -9,21 +9,23 @@ description = "Console-first Python security sidekick with focused MCP servers."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "certifi",
-    "mcp[cli]",
-    "dnspython",
-    "httpx",
-    "ipwhois",
-    "pydantic",
-    "python-dotenv",
-    "python-whois",
+    "certifi>=2026.6.17",
+    # Upper bound is deliberate: mcp 2.0.0 is a major rework of the SDK. The
+    # [cli] extra is intentionally absent; it pulls typer, rich, uvicorn and
+    # starlette for a command-line tool these stdio servers do not use.
+    "mcp>=1.28,<2",
+    "dnspython>=2.8,<3",
+    "httpx>=0.28,<0.29",
+    "ipwhois>=1.3,<2",
+    "pydantic>=2.13,<3",
+    "python-dotenv>=1.2,<2",
+    "python-whois>=0.9.6,<0.10",
 ]
 
 [project.scripts]
 threatsyft = "threatsyft.cli:main"
 threatsyft-enrichment-mcp = "threatsyft.mcp.enrichment_server:main"
 threatsyft-knowledge-mcp = "threatsyft.mcp.knowledge_server:main"
-threatsyft-research-mcp = "threatsyft.mcp.research_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

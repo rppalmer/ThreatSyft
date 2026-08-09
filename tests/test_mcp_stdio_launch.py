@@ -11,7 +11,6 @@ import pytest
 SERVER_MODULES = [
     "threatsyft.mcp.enrichment_server",
     "threatsyft.mcp.knowledge_server",
-    "threatsyft.mcp.research_server",
 ]
 
 

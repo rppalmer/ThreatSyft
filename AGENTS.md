@@ -4,7 +4,8 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 
 ## Read First
 
-- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture (including the API-backed provider and research roadmap).
+- Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture (including the API-backed provider roadmap).
+- Read `TODO.md` before starting work. It is the source of truth for the in-progress architecture rework: the target design, the agreed decisions, the response contracts, and which phase is current.
 - Use `README.md` for the current user-facing overview and development commands.
 
 ## Standing Rules
@@ -22,10 +23,11 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 
 ## Current Direction
 
-Build toward three focused MCP servers over time:
+Build toward two focused MCP servers:
 
 - `threatsyft-enrichment`: indicator enrichment and vendor API lookups.
-- `threatsyft-knowledge`: MITRE ATT&CK, CVEs, CISA KEV, LOLBAS, living-off-the-land, and defensive tradecraft knowledge.
-- `threatsyft-research`: current public write-ups, summaries, attack flow extraction, and IOC extraction.
+- `threatsyft-knowledge`: MITRE ATT&CK, CVEs, CISA KEV, LOLBAS, living-off-the-land, defensive tradecraft knowledge, and local IOC extraction from text.
+
+Current public write-ups, article fetching, and summarisation belong to the separate net-razor project, which already carries the trust class for retrieving content it did not author.
 
 Do not split servers before the behavior justifies it. The current implementation should continue using the existing enrichment server while the project is small.

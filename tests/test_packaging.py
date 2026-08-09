@@ -13,7 +13,6 @@ def test_pyproject_exposes_console_scripts() -> None:
         "threatsyft": "threatsyft.cli:main",
         "threatsyft-enrichment-mcp": "threatsyft.mcp.enrichment_server:main",
         "threatsyft-knowledge-mcp": "threatsyft.mcp.knowledge_server:main",
-        "threatsyft-research-mcp": "threatsyft.mcp.research_server:main",
     }
 
 
@@ -32,5 +31,4 @@ def test_mcp_example_configs_are_valid_json() -> None:
         assert set(data[top_level_key]) == {
             "threatsyft-enrichment",
             "threatsyft-knowledge",
-            "threatsyft-research",
         }
