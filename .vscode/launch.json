@@ -12,17 +12,6 @@
             }
         },
         {
-            "name": "ThreatSyft: main",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "main",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
             "name": "ThreatSyft: MCP enrichment server",
             "type": "debugpy",
             "request": "launch",
@@ -32,6 +21,31 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
             }
+        },
+        {
+            "name": "ThreatSyft: MCP knowledge server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "threatsyft.mcp.knowledge_server",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "ThreatSyft: update snapshots",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "threatsyft.update_cli",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "args": [
+                "all"
+            ]
         }
     ]
 }

@@ -1,6 +1,6 @@
 # ThreatSyft
 
-ThreatSyft is a console-first Python security sidekick. It exposes focused tools through local MCP servers so an AI client, such as VS Code with MCP support, can request structured security context without getting unsafe general-purpose access to the machine.
+ThreatSyft exposes focused security tools through local MCP servers, so an AI client such as VS Code can request structured security context without getting unsafe general-purpose access to the machine. MCP is the only interface; the single console command exists to download snapshots.
 
 The current implementation has an enrichment server for indicator context and a knowledge server for defensive ATT&CK, CVE, KEV, and LOLBAS context, plus local IOC extraction. Both keep core logic separate from the MCP transport layer.
 
@@ -365,7 +365,7 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 
 ## Troubleshooting
 
-- `missing_api_key`: the expected variable is absent. Check `.env`, or run `.venv/bin/python main.py --compact doctor` for a local-only key-presence check that does not print secrets.
+- `missing_api_key`: the expected variable is absent. Check `.env`, or call `enrichment_status` for a local-only key-presence check that does not print secrets. A missing key is reported per source and the call still succeeds, so other sources still return data.
 - `authentication_error`: the key exists but the provider rejected it.
 - `rate_limited`: wait, or use a different provider-specific tool. `cve_lookup` uses the live NVD API — set `NVD_API_KEY` in `.env` or retry later.
 - Slow RDAP or WHOIS: keep `THREATSYFT_TIMEOUT_SECONDS` at `15`, or temporarily raise it in `.env`.

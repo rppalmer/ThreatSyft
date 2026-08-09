@@ -41,11 +41,11 @@ coverage.xml
 htmlcov/
 *.cover
 
-# --- Local knowledge snapshots (downloaded via `threatsyft knowledge-update`) ---
-data/knowledge/attack/enterprise-attack.json
-data/knowledge/cisa/known_exploited_vulnerabilities.json
-data/knowledge/d3fend/d3fend.json
-data/knowledge/lolbas/lolbas.json
+# --- Local knowledge snapshots ---
+# Downloaded with `threatsyft-update` into ~/.threatsyft/knowledge/, outside the
+# repo, so nothing here needs ignoring. Kept only in case a snapshot is ever
+# pointed at a repo-local path via THREATSYFT_*_PATH.
+data/knowledge/
 
 # --- Claude Code (per-user local settings; shared .claude/ config stays tracked) ---
 .claude/settings.local.json

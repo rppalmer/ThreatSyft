@@ -1,6 +1,6 @@
 # ThreatSyft Architecture
 
-ThreatSyft is a console-first Python security sidekick. It exposes focused, read-only security capabilities to an AI client through MCP while keeping the actual investigation logic in ordinary Python modules.
+ThreatSyft exposes focused, read-only security capabilities to an AI client through MCP, keeping the investigation logic in ordinary Python modules. MCP is the only interface; the one console command downloads snapshots, which cannot live behind a tool call without breaking the servers' read-only posture.
 
 The goal is to build a practical guided SOC sidekick: an agent can call tools, explain findings, and help prioritize next steps, but the tool layer should stay explicit, predictable, and safe.
 

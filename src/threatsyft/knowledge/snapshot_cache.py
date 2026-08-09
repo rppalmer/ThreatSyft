@@ -2,7 +2,7 @@
 
 The MCP servers are long-lived processes, so re-reading and re-parsing a
 multi-megabyte snapshot on every tool call is pure waste. Each parsed catalog
-is cached keyed by ``(path, file-mtime)``; when an explicit ``knowledge-update``
+is cached keyed by ``(path, file-mtime)``; when an explicit ``threatsyft-update``
 rewrites a snapshot, its mtime changes and the next lookup reparses, so the
 "updates refresh the snapshot" contract keeps working without a restart.
 """
