@@ -10,6 +10,7 @@ from threatsyft.knowledge.iocs import extract_iocs as run_extract_iocs
 from threatsyft.knowledge.lookup import lookup as run_lookup
 from threatsyft.knowledge.lookup import search as run_search
 from threatsyft.knowledge.status import knowledge_status as run_knowledge_status
+from threatsyft.logging_setup import configure_logging
 
 mcp = FastMCP(
     "ThreatSyft Knowledge",
@@ -56,6 +57,7 @@ def knowledge_status() -> dict[str, Any]:
 
 def main() -> None:
     """Run the knowledge MCP server over stdio."""
+    configure_logging()
     mcp.run(transport="stdio")
 
 

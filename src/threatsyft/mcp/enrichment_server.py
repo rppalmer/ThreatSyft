@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from threatsyft.enrichment.enrich import enrich as run_enrich
 from threatsyft.enrichment.status import enrichment_status as run_enrichment_status
+from threatsyft.logging_setup import configure_logging
 
 mcp = FastMCP(
     "ThreatSyft Enrichment",
@@ -36,6 +37,7 @@ def enrich(indicator: str) -> dict[str, Any]:
 
 def main() -> None:
     """Run the enrichment MCP server over stdio."""
+    configure_logging()
     mcp.run(transport="stdio")
 
 

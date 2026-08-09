@@ -17,6 +17,7 @@ from threatsyft.core import error_response, success_response
 from threatsyft.knowledge.update_attack import update_attack_snapshot
 from threatsyft.knowledge.update_kev import update_kev_snapshot
 from threatsyft.knowledge.update_lolbas import update_lolbas_snapshot
+from threatsyft.logging_setup import configure_logging
 
 TOOL_NAME = "knowledge_update"
 
@@ -31,6 +32,7 @@ UPDATE_FUNCTIONS: dict[str, UpdateFunction] = {
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Refresh local knowledge snapshots and return a process exit code."""
+    configure_logging()
     parser = argparse.ArgumentParser(
         prog="threatsyft-update",
         description="Refresh local knowledge snapshots; downloads source data over the network.",
