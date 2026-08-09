@@ -24,10 +24,7 @@ ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common
 - Shodan passive host information
 - AlienVault OTX indicator context
 - Google Safe Browsing URL checks
-- Aggregate IP reputation fact packs
-- Aggregate domain reputation fact packs
-- Aggregate URL reputation fact packs
-- Aggregate file hash reputation fact packs
+- Single-call enrichment across every source supporting an indicator type
 - Local MITRE ATT&CK Enterprise technique lookup
 - Local MITRE ATT&CK Enterprise technique search
 - Local MITRE ATT&CK Enterprise tactic lookup
@@ -42,7 +39,7 @@ ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common
 - Local LOLBAS defensive living-off-the-land lookup
 - Local LOLBAS search
 - Local knowledge snapshot status checks
-- Explicit knowledge snapshot updates from the CLI
+- Explicit knowledge snapshot updates from `threatsyft-update`
 - Local IOC extraction from text
 
 Each tool has one explicit job and returns a structured JSON response with a stable envelope:
@@ -94,10 +91,7 @@ It exposes focused read-only tools:
 - `ipgeolocation_lookup(ip: str)`
 - `alienvault_indicator_lookup(indicator: str)`
 - `google_safebrowsing_check_url(url: str)`
-- `ip_reputation(ip: str)`
-- `domain_reputation(domain: str)`
-- `url_reputation(url: str)`
-- `file_reputation(file_hash: str)`
+- `enrich(indicator: str)`
 
 The knowledge MCP server is defined in `src/threatsyft/mcp/knowledge_server.py`.
 
@@ -141,7 +135,7 @@ The MCP layers are deliberately thin. They register tools and pass requests to c
 
 Checks local enrichment provider configuration without calling external providers.
 
-Returned data includes provider tool names, API-key presence booleans, aggregate fact-pack requirements, and `secret_values_returned: false`.
+Returned data includes provider tool names, API-key presence booleans, the configured and missing key lists across every provider, and `secret_values_returned: false`.
 
 ### `dns_lookup(domain: str)`
 
@@ -342,61 +336,21 @@ Returned data may include:
 - threat metadata when available
 - a light verdict
 
-### `ip_reputation(ip: str)`
+### `enrich(indicator: str)`
 
-Builds a deterministic fact pack from the provider-specific IP tools.
+Classifies one indicator and collects context from every source that supports its type, in a single call. Accepts an IP, domain, URL, or MD5/SHA1/SHA256 hash.
 
-This tool does not replace the agent's final analysis. It collects and normalizes provider results so the agent has a compact evidence bundle to summarize.
-
-Returned data includes:
-
-- overall verdict
-- confidence
-- key signals
-- provider results
-- provider errors
-
-### `domain_reputation(domain: str)`
-
-Builds a deterministic fact pack from the domain-focused tools.
-
-This tool does not replace the agent's final analysis. It collects and normalizes domain evidence so the agent has a compact bundle to summarize.
+This is collection, not judgement. It returns **no** overall verdict and no confidence score: a verdict computed here would silently change meaning when one provider rate-limits, and the caller cannot see that happen. Interpretation is the calling agent's job.
 
 Returned data includes:
 
-- overall verdict
-- confidence
-- key signals
-- provider results
-- provider errors
+- `indicator` and `indicator_type`, echoed back so a caller that guessed wrong can self-correct
+- `source_summary`, an `{ok, failed}` count for branching without iterating
+- `sources`, one map keyed by source name where every entry has the same shape whether it succeeded (`{"ok": true, "data": {...}}`) or not (`{"ok": false, "code": ..., "message": ...}`)
 
-### `url_reputation(url: str)`
+Source order is fixed and independent of which source responds first.
 
-Builds a deterministic fact pack from the URL-focused provider tools.
-
-This tool does not replace the agent's final analysis. It collects and normalizes URL evidence so the agent has a compact bundle to summarize.
-
-Returned data includes:
-
-- overall verdict
-- confidence
-- key signals
-- provider results
-- provider errors
-
-### `file_reputation(file_hash: str)`
-
-Builds a deterministic fact pack from the file-hash provider tools.
-
-This tool does not replace the agent's final analysis. It collects and normalizes file hash evidence so the agent has a compact bundle to summarize.
-
-Returned data includes:
-
-- overall verdict
-- confidence
-- key signals
-- provider results
-- provider errors
+`ok: false` means only that the caller must change something: unclassifiable input, or a reference that belongs to another tool. Every source failing is still `ok: true` with the failures attributed, because retrying will not fix an absence of data. Passing a CVE or ATT&CK technique id returns `ok: false` naming the tool that does handle it.
 
 ### `attack_technique_lookup(technique_id: str)`
 
@@ -512,7 +466,6 @@ Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values 
 
 ```text
 .
-├── main.py
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── pyproject.toml
@@ -522,18 +475,14 @@ Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values 
 │       ├── enrichment/
 │       │   ├── abuseipdb.py
 │       │   ├── alienvault.py
-│       │   ├── domain_reputation.py
 │       │   ├── dns.py
-│       │   ├── file_reputation.py
 │       │   ├── greynoise.py
-│       │   ├── ip_reputation.py
 │       │   ├── ipgeolocation.py
 │       │   ├── models.py
 │       │   ├── rdap.py
 │       │   ├── safebrowsing.py
 │       │   ├── securitytrails.py
 │       │   ├── shodan.py
-│       │   ├── url_reputation.py
 │       │   ├── virustotal.py
 │       │   └── whois.py
 │       ├── knowledge/
@@ -664,119 +613,47 @@ Check formatting:
 .venv/bin/ruff format --check .
 ```
 
-Run the console helper:
+Refresh a local knowledge snapshot:
 
 ```bash
-.venv/bin/python main.py domain example.com
+.venv/bin/threatsyft-update attack
+.venv/bin/threatsyft-update kev
+.venv/bin/threatsyft-update d3fend
+.venv/bin/threatsyft-update lolbas
 ```
 
-Download or refresh the local MITRE ATT&CK Enterprise snapshot:
+Refresh all of them in sequence:
 
 ```bash
-.venv/bin/python main.py knowledge-update attack
+.venv/bin/threatsyft-update all
 ```
 
-Download or refresh the local CISA KEV snapshot:
+Snapshot updates use live network access. Knowledge MCP lookups are local-only at runtime. If a snapshot is missing, run the relevant update command once.
 
-```bash
-.venv/bin/python main.py knowledge-update kev
-```
+`threatsyft-update` is the only CLI ThreatSyft ships. MCP is the interface for everything else: snapshot downloads are the one capability with nowhere else to live, since making them an MCP tool would put a multi-megabyte network write behind a model's decision and break the read-only posture of the servers.
 
-Download or refresh the local D3FEND snapshot:
+A successful update exits with code `0`. A failure exits with `1` while still printing a structured JSON error.
 
-```bash
-.venv/bin/python main.py knowledge-update d3fend
-```
-
-Download or refresh the local LOLBAS snapshot:
-
-```bash
-.venv/bin/python main.py knowledge-update lolbas
-```
-
-Check local knowledge snapshot readiness without calling external providers:
-
-```bash
-.venv/bin/python main.py --compact knowledge-status
-```
-
-Refresh all local knowledge snapshots in sequence:
-
-```bash
-.venv/bin/python main.py knowledge-update all
-```
-
-Knowledge update commands use live network access to download snapshots. Knowledge MCP lookups are local-only at runtime. If a snapshot is missing, run the relevant update command once from the repository root.
-
-For a short status view, use `--compact`:
-
-```bash
-.venv/bin/python main.py --compact domain example.com
-```
-
-Try each supported aggregate command:
-
-```bash
-.venv/bin/python main.py --compact ip 8.8.8.8
-.venv/bin/python main.py --compact domain example.com
-.venv/bin/python main.py --compact url https://example.com/
-.venv/bin/python main.py --compact file d41d8cd98f00b204e9800998ecf8427e
-```
-
-Leave `--compact` off when you want full provider results:
-
-```bash
-.venv/bin/python main.py ip 8.8.8.8
-.venv/bin/python main.py domain example.com
-.venv/bin/python main.py url https://example.com/
-.venv/bin/python main.py file d41d8cd98f00b204e9800998ecf8427e
-```
-
-Show CLI help:
-
-```bash
-.venv/bin/python main.py --help
-.venv/bin/python main.py domain --help
-```
-
-Run local-only checks for configuration and available tools:
-
-```bash
-.venv/bin/python main.py --compact doctor
-.venv/bin/python main.py --compact tools
-.venv/bin/python main.py --compact knowledge-status
-```
-
-Run live smoke checks against safe sample indicators. This uses provider calls and may consume quota:
-
-```bash
-.venv/bin/python main.py --compact smoke
-```
-
-A successful result exits with code `0`. A failed lookup or invalid input exits with code `1` while still printing a structured JSON error.
-
-Safe benign sample indicators for smoke testing: IP `8.8.8.8`, domain `example.com`, URL `https://example.com/`, MD5 `d41d8cd98f00b204e9800998ecf8427e`. Provider verdicts can disagree; treat aggregate results as evidence bundles for the agent, not final truth.
+Safe benign sample indicators for manual checks: IP `8.8.8.8`, domain `example.com`, URL `https://example.com/`, MD5 `d41d8cd98f00b204e9800998ecf8427e`. Sources can disagree; `enrich` reports what each one said and leaves the interpretation to you.
 
 ## VS Code Tasks
 
-The repository ships convenience tasks that wrap `main.py`. Open the Command Palette, run `Tasks: Run Task`, and choose one of:
+The repository ships convenience tasks. Open the Command Palette, run `Tasks: Run Task`, and choose one of:
 
-- `ThreatSyft: CLI domain example.com`
-- `ThreatSyft: CLI help`
-- `ThreatSyft: CLI doctor`
-- `ThreatSyft: CLI tools`
-- `ThreatSyft: CLI smoke safe samples`
-- `ThreatSyft: Knowledge status`
-- `ThreatSyft: Knowledge update all`
+- `Install/update dependencies`
+- `Ruff: check`
+- `Ruff: format check`
+- `Pytest`
+- `ThreatSyft: Update knowledge snapshots`
 
 ## Example Agent Prompts
 
 Once your MCP host has discovered the servers, drive them from the agent with prompts like:
 
 - `Use ThreatSyft enrichment_status and tell me which providers are configured. Do not print secret values.`
-- `Use ThreatSyft ip_reputation on 8.8.8.8. Tell me which providers returned results and which failed.`
-- `Use ThreatSyft domain_reputation on example.com and summarize the key signals.`
-- `Use ThreatSyft url_reputation on https://example.com/ and explain any provider disagreement.`
+- `Use ThreatSyft enrich on 8.8.8.8. Tell me which sources returned data and which failed.`
+- `Use ThreatSyft enrich on example.com and summarize what each source said.`
+- `Use ThreatSyft enrich on https://example.com/ and explain any disagreement between sources.`
 - `Use ThreatSyft virustotal_file_report on d41d8cd98f00b204e9800998ecf8427e.`
 - `Use ThreatSyft attack_technique_lookup on T1059 and explain the defensive context.`
 - `Use ThreatSyft technique_brief on T1059 and summarize the key defensive context.`
@@ -785,7 +662,7 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
 - `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 
-Use provider-specific tools when you need raw provider detail or want to isolate one data source. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
+Prefer `enrich` for a whole picture of one indicator; reach for a provider-specific tool only when you want to isolate a single vendor's view. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
 
 ## Troubleshooting
 

@@ -17,7 +17,7 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 - Never add generic command execution tools.
 - Never hardcode API keys, credentials, or machine-specific secrets.
 - Use environment variables or ignored local `.env` files for secrets.
-- Prefer small provider-specific tools before aggregate tools such as `ip_reputation`.
+- Parallel fetch is fine; scoring is not. Collecting from many sources in one call is good design; reducing them to a verdict or confidence score is not, because that number changes meaning when a source fails and the caller cannot see it happen.
 - Keep tests mocked by default for external providers so normal test runs do not require live network access or API keys.
 - Treat attacker techniques, living-off-the-land behavior, and EDR evasion content as defensive knowledge only: understanding, mapping, detection, triage, and mitigation are in scope; offensive automation and bypass generation are out of scope.
 

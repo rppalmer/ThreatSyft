@@ -22,9 +22,5 @@ def test_mcp_server_registers_expected_tools() -> None:
         "ipgeolocation_lookup",
         "alienvault_indicator_lookup",
         "google_safebrowsing_check_url",
-        "ip_reputation",
-        "domain_reputation",
-        "url_reputation",
-        "file_reputation",
         "enrich",
     ]

@@ -46,80 +46,19 @@
             "problemMatcher": []
         },
         {
-            "label": "ThreatSyft: CLI domain example.com",
+            "label": "ThreatSyft: Update knowledge snapshots",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
-                "main.py",
-                "--compact",
-                "domain",
-                "example.com"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: CLI help",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "--help"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: CLI doctor",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "--compact",
-                "doctor"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: CLI tools",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "--compact",
-                "tools"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: CLI smoke safe samples",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "--compact",
-                "smoke"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: Knowledge status",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "--compact",
-                "knowledge-status"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "ThreatSyft: Knowledge update all",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "main.py",
-                "knowledge-update",
+                "-m",
+                "threatsyft.update_cli",
                 "all"
             ],
+            "options": {
+                "env": {
+                    "PYTHONPATH": "${workspaceFolder}/src"
+                }
+            },
             "problemMatcher": []
         }
     ]

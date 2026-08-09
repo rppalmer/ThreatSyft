@@ -10,7 +10,7 @@ def test_pyproject_exposes_console_scripts() -> None:
     assert data["build-system"]["build-backend"] == "setuptools.build_meta"
     assert data["project"]["name"] == "threatsyft"
     assert data["project"]["scripts"] == {
-        "threatsyft": "threatsyft.cli:main",
+        "threatsyft-update": "threatsyft.update_cli:main",
         "threatsyft-enrichment-mcp": "threatsyft.mcp.enrichment_server:main",
         "threatsyft-knowledge-mcp": "threatsyft.mcp.knowledge_server:main",
     }

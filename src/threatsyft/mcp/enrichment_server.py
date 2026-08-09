@@ -11,11 +11,8 @@ from threatsyft.enrichment.alienvault import (
     alienvault_indicator_lookup as run_alienvault_indicator_lookup,
 )
 from threatsyft.enrichment.dns import dns_lookup as run_dns_lookup
-from threatsyft.enrichment.domain_reputation import domain_reputation as run_domain_reputation
 from threatsyft.enrichment.enrich import enrich as run_enrich
-from threatsyft.enrichment.file_reputation import file_reputation as run_file_reputation
 from threatsyft.enrichment.greynoise import greynoise_ip_context as run_greynoise_ip_context
-from threatsyft.enrichment.ip_reputation import ip_reputation as run_ip_reputation
 from threatsyft.enrichment.ipgeolocation import (
     ipgeolocation_lookup as run_ipgeolocation_lookup,
 )
@@ -28,7 +25,6 @@ from threatsyft.enrichment.securitytrails import (
 )
 from threatsyft.enrichment.shodan import shodan_host_lookup as run_shodan_host_lookup
 from threatsyft.enrichment.status import enrichment_status as run_enrichment_status
-from threatsyft.enrichment.url_reputation import url_reputation as run_url_reputation
 from threatsyft.enrichment.virustotal import (
     virustotal_domain_report as run_virustotal_domain_report,
 )
@@ -46,12 +42,13 @@ from threatsyft.enrichment.whois import whois_lookup as run_whois_lookup
 mcp = FastMCP(
     "ThreatSyft Enrichment",
     instructions=(
-        "Focused read-only indicator enrichment tools. Use this server for IPs, domains, "
-        "URLs, file hashes, DNS, RDAP, WHOIS, geolocation, provider reputation, and "
-        "aggregate reputation fact packs. Provider-specific tools return one vendor's "
-        "view; ip_reputation, domain_reputation, url_reputation, and file_reputation "
-        "combine multiple providers. Use enrichment_status to check configured providers "
-        "without exposing secrets or calling external APIs."
+        "Read-only indicator enrichment for IPs, domains, URLs, and file hashes. "
+        "Prefer enrich(indicator): it classifies the indicator and collects context "
+        "from every source supporting its type in one call, reporting per-source "
+        "success or failure. It returns no verdict and no confidence score - judgement "
+        "is the caller's. Use a provider-specific tool only to isolate one vendor's "
+        "view. Use enrichment_status to check which API keys are configured, without "
+        "exposing secrets or calling external APIs."
     ),
 )
 
@@ -144,30 +141,6 @@ def alienvault_indicator_lookup(indicator: str) -> dict[str, Any]:
 def google_safebrowsing_check_url(url: str) -> dict[str, Any]:
     """Check one URL against Google Safe Browsing threat lists."""
     return run_google_safebrowsing_check_url(url)
-
-
-@mcp.tool()
-def ip_reputation(ip: str) -> dict[str, Any]:
-    """Build an aggregate IP reputation fact pack from multiple provider results."""
-    return run_ip_reputation(ip)
-
-
-@mcp.tool()
-def domain_reputation(domain: str) -> dict[str, Any]:
-    """Build an aggregate domain reputation fact pack from multiple provider results."""
-    return run_domain_reputation(domain)
-
-
-@mcp.tool()
-def url_reputation(url: str) -> dict[str, Any]:
-    """Build an aggregate URL reputation fact pack from multiple provider results."""
-    return run_url_reputation(url)
-
-
-@mcp.tool()
-def file_reputation(file_hash: str) -> dict[str, Any]:
-    """Build an aggregate file hash reputation fact pack from multiple provider results."""
-    return run_file_reputation(file_hash)
 
 
 @mcp.tool()

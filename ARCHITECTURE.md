@@ -2,7 +2,7 @@
 
 ThreatSyft is a console-first Python security sidekick. It exposes focused, read-only security capabilities to an AI client through MCP while keeping the actual investigation logic in ordinary Python modules.
 
-The goal is to build a practical guided SOC sidekick: an agent can call tools, explain findings, and help prioritize next steps, but the tool layer should stay explicit, deterministic, and safe.
+The goal is to build a practical guided SOC sidekick: an agent can call tools, explain findings, and help prioritize next steps, but the tool layer should stay explicit, predictable, and safe.
 
 ## Current Architecture
 
@@ -32,10 +32,7 @@ It exposes read-only enrichment tools for:
 - IPGeolocation.io IP geolocation
 - AlienVault OTX indicator context
 - Google Safe Browsing URL checks
-- Aggregate IP reputation fact packs
-- Aggregate domain reputation fact packs
-- Aggregate URL reputation fact packs
-- Aggregate file hash reputation fact packs
+- Single-call enrichment across every source supporting an indicator type
 - local enrichment provider status checks
 
 `threatsyft-knowledge` exposes local-only defensive knowledge tools for:
@@ -59,7 +56,7 @@ The MCP transport lives in `src/threatsyft/mcp/enrichment_server.py`. It should 
 
 The knowledge MCP transport lives in `src/threatsyft/mcp/knowledge_server.py` and follows the same thin wrapper pattern.
 
-Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. These modules should be usable outside MCP, including from tests, future CLI commands, or future aggregate analysis functions.
+Core enrichment logic lives under `src/threatsyft/enrichment/`. Core knowledge logic lives under `src/threatsyft/knowledge/`. These modules should be usable outside MCP, including from tests.
 
 All tools return the shared JSON envelope:
 
@@ -101,7 +98,7 @@ Examples:
 
 - DNS, RDAP, WHOIS, and geolocation
 - VirusTotal, AbuseIPDB, Shodan, GreyNoise, SecurityTrails, AlienVault OTX, Google Safe Browsing
-- Aggregate tools such as `ip_reputation`, `domain_reputation`, `url_reputation`, and `file_reputation`
+- `enrich`, which fans out to every source supporting the indicator's type
 
 ### `threatsyft-knowledge`
 
@@ -132,7 +129,7 @@ When adding future capabilities, choose the boundary based on the question the t
 
 The agent is the reasoning layer. MCP tools should provide reliable facts, compact summaries, and safe actions.
 
-Aggregate tools such as `ip_reputation`, `domain_reputation`, `url_reputation`, and `file_reputation` should build deterministic evidence bundles. They should not produce the final human-readable investigation narrative; the agent remains responsible for interpretation, caveats, follow-up questions, and written summaries.
+Parallel fetch is fine; scoring is not. `enrich` calls many sources at once and reports what each returned, with fixed source ordering. It deliberately produces no overall verdict and no confidence score: such a value silently changes meaning when one provider rate-limits, and the caller cannot see that happen. The agent remains responsible for interpretation, caveats, follow-up questions, and written summaries.
 
 ## Safety Posture
 
