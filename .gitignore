@@ -65,3 +65,6 @@ Desktop.ini
 
 # --- Logs ---
 *.log
+
+# --- Local working notes, not published ---
+TODO.md

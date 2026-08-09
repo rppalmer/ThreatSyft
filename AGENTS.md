@@ -5,7 +5,7 @@ ThreatSyft is a local Python security sidekick that uses MCP as the agent tool l
 ## Read First
 
 - Read `ARCHITECTURE.md` before changing MCP server boundaries, tool design, project structure, or long-term architecture (including the API-backed provider roadmap).
-- Read `TODO.md` before starting work. It is the source of truth for the in-progress architecture rework: the target design, the agreed decisions, the response contracts, and which phase is current.
+- Read `TODO.md` first if it is present. It is a local, unpublished working file and the source of truth for the in-progress architecture rework: the target design, the agreed decisions, the response contracts, and which phase is current. Nothing in it is guaranteed to be reflected in the tracked docs yet.
 - Use `README.md` for the current user-facing overview and development commands.
 
 ## Standing Rules
