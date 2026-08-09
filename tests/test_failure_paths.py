@@ -65,8 +65,8 @@ def test_lookup_survives_a_corrupt_snapshot_and_attributes_it(tmp_path, monkeypa
     result = lookup("T1059")
 
     assert result["ok"] is True
-    assert result["data"]["sources"]["attack"]["ok"] is False
-    assert result["data"]["sources"]["attack"]["code"] == "parse_error"
+    assert result["data"]["sources"]["attack_technique"]["ok"] is False
+    assert result["data"]["sources"]["attack_technique"]["code"] == "parse_error"
     assert result["data"]["sources"]["lolbas"]["ok"] is True
 
 

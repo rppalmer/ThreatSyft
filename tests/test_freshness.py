@@ -94,7 +94,7 @@ def test_lookup_reports_freshness_on_the_failure_path(monkeypatch, tmp_path) -> 
 
 
 def test_lookup_reports_freshness_on_the_success_path() -> None:
-    entry = lookup("T1059")["data"]["sources"]["attack"]
+    entry = lookup("T1059")["data"]["sources"]["attack_technique"]
 
     assert entry["ok"] is True
     assert entry["freshness"]["snapshot_present"] is True
@@ -103,7 +103,7 @@ def test_lookup_reports_freshness_on_the_success_path() -> None:
 def test_search_reports_freshness_for_every_snapshot_source() -> None:
     sources = search("cert")["data"]["sources"]
 
-    for name in ["attack", "kev", "lolbas"]:
+    for name in ["attack", "actors", "kev", "lolbas"]:
         assert "freshness" in sources[name], name
 
 

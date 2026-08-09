@@ -132,9 +132,11 @@ Collects every local source covering one reference, in a single call. Accepts:
 - a CVE id such as `CVE-2024-3400`, which asks NVD (live) and the local KEV catalog
 - an ATT&CK technique id such as `T1059` or `T1059.001`, which asks ATT&CK and searches LOLBAS
 - an ATT&CK tactic id such as `TA0002`
-- a bare name such as `Certutil.exe` or `execution`, which asks both LOLBAS and ATT&CK tactics
+- an ATT&CK mitigation id such as `M1038`
+- an ATT&CK group id such as `G0016`
+- a bare name such as `Certutil.exe`, `execution`, `APT29` or `Cozy Bear`
 
-A bare name is ambiguous: it could be a LOLBAS binary or a tactic. Rather than guess, `lookup` asks both. They are local and fast, and the `sources` map shows which one answered.
+A bare name is ambiguous: it could be a LOLBAS binary, a tactic, or a threat actor or one of its aliases. Rather than guess, `lookup` asks all three. They are local and fast, and the `sources` map shows which one answered.
 
 Returned data includes `reference`, `reference_type`, `source_summary`, and the same `sources` map `enrich` returns.
 
@@ -142,13 +144,13 @@ Passing an IP, URL or file hash returns `ok: false` naming `enrich` instead.
 
 ### `search(query: str, source: str = "all", limit: int = 10)`
 
-Searches ATT&CK, KEV and LOLBAS by keyword, grouped by source.
+Searches ATT&CK techniques, ATT&CK threat actors, KEV and LOLBAS by keyword, grouped by source.
 
 Results are never merged into one ranked list. The three catalogs share almost no fields and their scoring functions produce numbers on unrelated scales, so a combined ranking would invent a precision that does not exist.
 
 `limit` applies **per source**, so `source="all"` does not quietly return three times the rows you asked for. Each source reports `match_count` (how many matched in total) alongside `returned` (how many came back), so you can tell 10-of-11 from 10-of-400.
 
-Set `source` to `attack`, `kev` or `lolbas` to search just one.
+Set `source` to `attack`, `actors`, `kev` or `lolbas` to search just one.
 
 ### `knowledge_status()`
 
@@ -369,6 +371,7 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft lookup on T1059 and summarize what each source returned.`
 - `Use ThreatSyft lookup on CVE-2024-3400 and tell me whether it is in KEV.`
 - `Use ThreatSyft search for MOVEit and show me the matches per source.`
+- `Use ThreatSyft lookup on APT29 and list the techniques it is recorded as using.`
 - `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
 - `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 

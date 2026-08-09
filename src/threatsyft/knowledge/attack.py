@@ -18,6 +18,7 @@ from threatsyft.knowledge.snapshot_cache import load_cached
 
 TECHNIQUE_ID_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
 MITIGATION_ID_PATTERN = re.compile(r"^M\d{4}$", re.IGNORECASE)
+ACTOR_ID_PATTERN = re.compile(r"^G\d{4}$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,19 @@ class Technique:
     mitigations: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass
+class Actor:
+    """Compact ATT&CK intrusion-set (threat actor) metadata."""
+
+    stix_id: str
+    actor_id: str
+    name: str
+    aliases: list[str]
+    description: str | None
+    source_url: str | None
+    technique_ids: list[str] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class AttackKnowledge:
     """Parsed ATT&CK Enterprise data and simple lookup indexes."""
@@ -64,6 +78,8 @@ class AttackKnowledge:
     tactics_by_short_name: dict[str, Tactic]
     tactics_by_alias: dict[str, Tactic]
     mitigations_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
+    actors_by_id: dict[str, Actor] = field(default_factory=dict)
+    actors_by_alias: dict[str, Actor] = field(default_factory=dict)
 
 
 def attack_technique_lookup(technique_id: str) -> dict[str, Any]:
@@ -220,6 +236,88 @@ def attack_mitigation_lookup(mitigation_id: str) -> dict[str, Any]:
     )
 
 
+def attack_actor_lookup(actor: str) -> dict[str, Any]:
+    """Look up one ATT&CK threat actor by G-id, name, or alias."""
+    query = {"actor": actor}
+
+    try:
+        alias = _normalize_actor_alias(actor)
+        knowledge = load_attack_knowledge()
+    except InputValidationError as exc:
+        return error_response("attack_actor_lookup", query, "invalid_input", str(exc))
+    except KnowledgeLoadError as exc:
+        return exc.to_response("attack_actor_lookup", query)
+
+    found = knowledge.actors_by_alias.get(alias)
+    if found is None:
+        return error_response(
+            "attack_actor_lookup",
+            query,
+            "not_found",
+            f"ATT&CK threat actor {actor!r} was not found in the local snapshot.",
+            {"snapshot_path": str(knowledge.path)},
+        )
+
+    query["actor"] = found.actor_id
+    return success_response(
+        "attack_actor_lookup",
+        query,
+        {
+            **_actor_summary(found),
+            "description": found.description,
+            "technique_count": len(found.technique_ids),
+            # Identity only, like every other list; call lookup on any id.
+            "techniques": [
+                _technique_ref(knowledge.techniques_by_id[technique_id])
+                for technique_id in found.technique_ids
+                if technique_id in knowledge.techniques_by_id
+            ],
+            "snapshot_path": str(knowledge.path),
+        },
+    )
+
+
+def attack_actor_search(query: str, limit: int = 10) -> dict[str, Any]:
+    """Search local ATT&CK threat actors by name, alias, or description."""
+    response_query: dict[str, Any] = {"query": query, "limit": limit}
+
+    try:
+        normalized_query = _normalize_search_query(query)
+        normalized_limit = _normalize_limit(limit)
+        knowledge = load_attack_knowledge()
+    except InputValidationError as exc:
+        return error_response("attack_actor_search", response_query, "invalid_input", str(exc))
+    except KnowledgeLoadError as exc:
+        return exc.to_response("attack_actor_search", response_query)
+
+    response_query["query"] = normalized_query
+    response_query["limit"] = normalized_limit
+    match_count, matches = _search_actors(knowledge, normalized_query, normalized_limit)
+
+    return success_response(
+        "attack_actor_search",
+        response_query,
+        {
+            "query": normalized_query,
+            "limit": normalized_limit,
+            "match_count": match_count,
+            "returned": len(matches),
+            "matches": matches,
+            "snapshot_path": str(knowledge.path),
+        },
+    )
+
+
+def normalize_actor_id(value: str) -> str:
+    """Normalize an ATT&CK group ID such as ``G0016``."""
+    actor_id = value.strip().upper()
+    if not actor_id:
+        raise InputValidationError("Threat actor ID must not be empty.")
+    if not ACTOR_ID_PATTERN.fullmatch(actor_id):
+        raise InputValidationError("Threat actor ID must look like G0016.")
+    return actor_id
+
+
 def normalize_mitigation_id(value: str) -> str:
     """Normalize an ATT&CK mitigation ID such as ``M1038``."""
     mitigation_id = value.strip().upper()
@@ -302,6 +400,7 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
     techniques_by_id: dict[str, Technique] = {}
     techniques_by_stix_id: dict[str, Technique] = {}
     mitigations_by_stix_id: dict[str, dict[str, Any]] = {}
+    actors_by_stix_id: dict[str, Actor] = {}
     relationships: list[dict[str, Any]] = []
 
     for item in objects:
@@ -328,6 +427,12 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
                 techniques_by_stix_id[technique.stix_id] = technique
             continue
 
+        if item_type == "intrusion-set":
+            actor = _parse_actor(item)
+            if actor is not None:
+                actors_by_stix_id[actor.stix_id] = actor
+            continue
+
         if item_type == "course-of-action":
             mitigation = _parse_mitigation(item)
             stix_id = _clean_optional_string(item.get("id"))
@@ -339,6 +444,17 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
             relationships.append(item)
 
     _apply_relationships(relationships, techniques_by_stix_id, mitigations_by_stix_id)
+    _apply_actor_relationships(relationships, techniques_by_stix_id, actors_by_stix_id)
+
+    actors_by_alias: dict[str, Actor] = {}
+    for actor in actors_by_stix_id.values():
+        actors_by_alias[_slug(actor.actor_id)] = actor
+        actors_by_alias[_slug(actor.name)] = actor
+        for alias in actor.aliases:
+            # An alias is only claimed if nothing else has it. ATT&CK reuses
+            # names across groups, and the first definition should win rather
+            # than the last one parsed.
+            actors_by_alias.setdefault(_slug(alias), actor)
     return AttackKnowledge(
         path=path,
         techniques_by_id=techniques_by_id,
@@ -349,6 +465,8 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
             mitigation["mitigation_id"]: mitigation
             for mitigation in mitigations_by_stix_id.values()
         },
+        actors_by_id={actor.actor_id: actor for actor in actors_by_stix_id.values()},
+        actors_by_alias=actors_by_alias,
     )
 
 
@@ -392,6 +510,46 @@ def _parse_technique(item: dict[str, Any]) -> Technique | None:
         deprecated=bool(item.get("x_mitre_deprecated", False)),
         is_subtechnique=bool(item.get("x_mitre_is_subtechnique", False)),
     )
+
+
+def _parse_actor(item: dict[str, Any]) -> Actor | None:
+    actor_id, source_url = _mitre_external_reference(item.get("external_references", []))
+    name = _clean_optional_string(item.get("name"))
+    stix_id = _clean_optional_string(item.get("id"))
+    if actor_id is None or name is None or stix_id is None:
+        return None
+
+    aliases = [
+        alias for alias in _string_list(item.get("aliases")) if alias.casefold() != name.casefold()
+    ]
+    return Actor(
+        stix_id=stix_id,
+        actor_id=actor_id,
+        name=name,
+        aliases=aliases,
+        description=_clean_optional_string(item.get("description")),
+        source_url=source_url,
+    )
+
+
+def _apply_actor_relationships(
+    relationships: list[dict[str, Any]],
+    techniques_by_stix_id: dict[str, Technique],
+    actors_by_stix_id: dict[str, Actor],
+) -> None:
+    """Attach the techniques each actor is recorded as using."""
+    for relationship in relationships:
+        if relationship.get("relationship_type") != "uses":
+            continue
+        actor = actors_by_stix_id.get(_clean_optional_string(relationship.get("source_ref")) or "")
+        technique = techniques_by_stix_id.get(
+            _clean_optional_string(relationship.get("target_ref")) or ""
+        )
+        if actor is not None and technique is not None:
+            actor.technique_ids.append(technique.technique_id)
+
+    for actor in actors_by_stix_id.values():
+        actor.technique_ids = sorted(set(actor.technique_ids))
 
 
 def _parse_mitigation(item: dict[str, Any]) -> dict[str, Any] | None:
@@ -624,6 +782,57 @@ def _normalize_limit(value: int) -> int:
     if value < 1 or value > 25:
         raise InputValidationError("Limit must be between 1 and 25.")
     return value
+
+
+def _normalize_actor_alias(value: str) -> str:
+    actor = value.strip()
+    if not actor:
+        raise InputValidationError("Threat actor must not be empty.")
+    return _slug(actor)
+
+
+def _actor_summary(actor: Actor) -> dict[str, Any]:
+    return {
+        "actor_id": actor.actor_id,
+        "name": actor.name,
+        "aliases": actor.aliases,
+        "source_url": actor.source_url,
+    }
+
+
+def _search_actors(
+    knowledge: AttackKnowledge,
+    query: str,
+    limit: int,
+) -> tuple[int, list[dict[str, Any]]]:
+    """Return the total number of matching actors and the limited slice."""
+    query_lower = query.lower()
+    scored: list[tuple[int, Actor]] = []
+
+    for actor in knowledge.actors_by_id.values():
+        score = 0
+        if query_lower == actor.name.lower() or query_lower == actor.actor_id.lower():
+            score += 100
+        elif query_lower in actor.name.lower():
+            score += 50
+        if any(query_lower == alias.lower() for alias in actor.aliases):
+            score += 80
+        elif any(query_lower in alias.lower() for alias in actor.aliases):
+            score += 30
+        if actor.description and query_lower in actor.description.lower():
+            score += 10
+        if score > 0:
+            scored.append((score, actor))
+
+    scored.sort(key=lambda item: (-item[0], item[1].actor_id))
+    return len(scored), [
+        {
+            **_actor_summary(actor),
+            "score": score,
+            "technique_count": len(actor.technique_ids),
+        }
+        for score, actor in scored[:limit]
+    ]
 
 
 def _normalize_tactic_alias(value: str) -> str:

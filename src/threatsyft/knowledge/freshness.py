@@ -27,12 +27,23 @@ UTC = ZoneInfo("UTC")
 STALE_AFTER_DAYS = {
     "kev": 14,
     "attack": 180,
+    "attack_technique": 180,
+    "attack_tactic": 180,
+    "attack_mitigation": 180,
+    "attack_actor": 180,
+    "actors": 180,
     "lolbas": 180,
 }
 
+# Several source names read the same ATT&CK snapshot, so they share its age.
 SNAPSHOT_PATHS = {
     "kev": get_cisa_kev_path,
     "attack": get_attack_stix_path,
+    "attack_technique": get_attack_stix_path,
+    "attack_tactic": get_attack_stix_path,
+    "attack_mitigation": get_attack_stix_path,
+    "attack_actor": get_attack_stix_path,
+    "actors": get_attack_stix_path,
     "lolbas": get_lolbas_path,
 }
 

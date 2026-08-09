@@ -15,8 +15,8 @@ threatsyft-knowledge    no keys, no metered calls
 |---|---|---|
 | enrichment | `enrich(indicator)` | Classify an IP, domain, URL or file hash and fan out concurrently to every source supporting that type. |
 | enrichment | `enrichment_status()` | Which API keys are present. No secret values, no network. |
-| knowledge | `lookup(reference)` | Classify a CVE, ATT&CK technique, ATT&CK tactic, mitigation or LOLBAS name and collect every source covering it. |
-| knowledge | `search(query, source, limit)` | Keyword search across ATT&CK, KEV and LOLBAS, grouped by source. |
+| knowledge | `lookup(reference)` | Classify a CVE, ATT&CK technique, tactic, mitigation, threat actor or LOLBAS name and collect every source covering it. |
+| knowledge | `search(query, source, limit)` | Keyword search across ATT&CK techniques, threat actors, KEV and LOLBAS, grouped by source. |
 | knowledge | `extract_iocs(text)` | Typed IOC candidates from text the caller already has. No network. |
 | knowledge | `knowledge_status()` | Snapshot readiness. |
 

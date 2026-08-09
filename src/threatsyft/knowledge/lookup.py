@@ -18,6 +18,8 @@ from threatsyft.core import InputValidationError, build_sources, error_response,
 from threatsyft.enrichment.models import classify_indicator
 from threatsyft.fanout import run_sources
 from threatsyft.knowledge.attack import (
+    attack_actor_lookup,
+    attack_actor_search,
     attack_mitigation_lookup,
     attack_tactic_lookup,
     attack_technique_lookup,
@@ -38,6 +40,7 @@ CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 TECHNIQUE_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
 TACTIC_PATTERN = re.compile(r"^TA\d{4}$", re.IGNORECASE)
 MITIGATION_PATTERN = re.compile(r"^M\d{4}$", re.IGNORECASE)
+ACTOR_PATTERN = re.compile(r"^G\d{4}$", re.IGNORECASE)
 
 # How many LOLBAS hits to attach when looking up an ATT&CK technique. This is a
 # supporting cross-reference, not the answer, so it stays small.
@@ -45,6 +48,7 @@ TECHNIQUE_LOLBAS_LIMIT = 5
 
 SEARCH_SOURCES = {
     "attack": run_attack_search,
+    "actors": attack_actor_search,
     "kev": run_kev_search,
     "lolbas": run_lolbas_search,
 }
@@ -160,28 +164,43 @@ def _classify_reference(value: str) -> tuple[str, str, tuple[tuple[str, Any], ..
         )
 
     if TACTIC_PATTERN.fullmatch(value):
-        return "attack_tactic", value.upper(), (("attack", attack_tactic_lookup),)
+        return "attack_tactic", value.upper(), (("attack_tactic", attack_tactic_lookup),)
 
     if MITIGATION_PATTERN.fullmatch(value):
-        return "attack_mitigation", value.upper(), (("attack", attack_mitigation_lookup),)
+        return (
+            "attack_mitigation",
+            value.upper(),
+            (("attack_mitigation", attack_mitigation_lookup),),
+        )
+
+    if ACTOR_PATTERN.fullmatch(value):
+        return "attack_actor", value.upper(), (("attack_actor", attack_actor_lookup),)
 
     if TECHNIQUE_PATTERN.fullmatch(value):
         return (
             "attack_technique",
             normalize_technique_id(value),
             (
-                ("attack", attack_technique_lookup),
+                ("attack_technique", attack_technique_lookup),
                 ("lolbas", lambda v: run_lolbas_search(v, TECHNIQUE_LOLBAS_LIMIT)),
             ),
         )
 
-    # A bare name could be an ATT&CK tactic ("execution") or a LOLBAS binary
-    # ("Certutil.exe"), and telling them apart up front would mean guessing.
-    # Ask both instead: they are local, fast, and whichever knows the name
-    # answers. That is the same principle the rest of the design follows -
-    # collect from every source that might have it and let the caller see which
-    # one did.
-    return "name", value, (("lolbas", lolbas_lookup), ("attack", attack_tactic_lookup))
+    # A bare name could be a LOLBAS binary ("Certutil.exe"), an ATT&CK tactic
+    # ("execution") or a threat actor ("APT29", "Cozy Bear"), and telling them
+    # apart up front would mean guessing. Ask all three instead: they are local,
+    # fast, and whichever knows the name answers. That is the same principle the
+    # rest of the design follows - collect from every source that might have it
+    # and let the caller see which one did.
+    return (
+        "name",
+        value,
+        (
+            ("lolbas", lolbas_lookup),
+            ("attack_tactic", attack_tactic_lookup),
+            ("attack_actor", attack_actor_lookup),
+        ),
+    )
 
 
 def _selected_sources(source: str) -> list[str] | None:

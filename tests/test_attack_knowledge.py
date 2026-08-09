@@ -204,3 +204,27 @@ def test_tactic_technique_list_is_trimmed_to_identity(attack_snapshot) -> None:
 
     for technique in data["techniques"]:
         assert set(technique) == {"technique_id", "name"}
+
+
+def test_actors_are_parsed_with_their_techniques(attack_snapshot) -> None:
+    """intrusion-set objects were read and discarded before actors were supported."""
+    knowledge = attack.load_attack_knowledge(FIXTURE_PATH)
+
+    actor = knowledge.actors_by_id["G9001"]
+    assert actor.name == "Fixture Bear"
+    assert "Test Panda" in actor.aliases
+    assert "T1059" in actor.technique_ids
+
+
+def test_actor_aliases_do_not_repeat_the_primary_name(attack_snapshot) -> None:
+    actor = attack.load_attack_knowledge(FIXTURE_PATH).actors_by_id["G9001"]
+
+    assert actor.name not in actor.aliases
+
+
+def test_actor_lookup_rejects_an_empty_value(attack_snapshot) -> None:
+    assert attack.attack_actor_lookup("  ")["error"]["code"] == "invalid_input"
+
+
+def test_actor_lookup_reports_an_unknown_actor_as_not_found(attack_snapshot) -> None:
+    assert attack.attack_actor_lookup("G9999")["error"]["code"] == "not_found"
