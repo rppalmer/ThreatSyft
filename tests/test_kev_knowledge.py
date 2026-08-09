@@ -18,7 +18,7 @@ def test_load_kev_catalog_missing_snapshot() -> None:
         kev.load_kev_catalog(Path("tests/fixtures/missing-kev.json"))
     except kev.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "threatsyft knowledge-update kev"
+        assert exc.details["setup_command"] == "threatsyft-update kev"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 

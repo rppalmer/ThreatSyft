@@ -186,8 +186,14 @@ def get_google_safebrowsing_base_url() -> str:
 
 
 def knowledge_update_command(source: str) -> str:
-    """Return the console command for refreshing one knowledge snapshot."""
-    return f"threatsyft knowledge-update {source}"
+    """Return the console command for refreshing one knowledge snapshot.
+
+    This string is what a caller is told to run when a snapshot is missing, so
+    it has to name a command that exists. It named the retired
+    ``threatsyft knowledge-update`` until an end-to-end run on a fresh install
+    surfaced it.
+    """
+    return f"threatsyft-update {source}"
 
 
 def _knowledge_path(env_name: str, *relative_parts: str) -> Path:

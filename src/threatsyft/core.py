@@ -71,11 +71,19 @@ def build_sources(
             continue
 
         error = envelope.get("error") if isinstance(envelope.get("error"), dict) else {}
-        sources[name] = {
+        entry = {
             "ok": False,
             "code": error.get("code", "unexpected_error"),
             "message": error.get("message", "Source lookup failed."),
         }
+        # Carry details through when a source provides them. This is where
+        # `setup_command` lives on a missing snapshot, which is the one piece of
+        # the response that tells a caller how to fix the problem; dropping it
+        # left "snapshot not found" with no way to act on it.
+        details = error.get("details")
+        if details:
+            entry["details"] = details
+        sources[name] = entry
 
     succeeded = sum(1 for entry in sources.values() if entry["ok"])
     return sources, {"ok": succeeded, "failed": len(sources) - succeeded}

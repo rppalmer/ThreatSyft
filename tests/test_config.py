@@ -31,7 +31,7 @@ def test_knowledge_path_env_override_wins(monkeypatch, tmp_path) -> None:
 
 
 def test_knowledge_update_command_is_console_friendly() -> None:
-    assert config.knowledge_update_command("attack") == "threatsyft knowledge-update attack"
+    assert config.knowledge_update_command("attack") == "threatsyft-update attack"
 
 
 def test_blank_env_override_falls_back_to_the_default(monkeypatch) -> None:

@@ -21,7 +21,11 @@ mcp = FastMCP(
         "lookups are local-only; the NVD CVE API is the one live call. "
         "extract_iocs pulls typed IOC candidates out of text you already have; it does "
         "no network access and does not fetch URLs. This server does not discover or "
-        "retrieve public reporting."
+        "retrieve public reporting. "
+        "Setup: the ATT&CK, KEV and LOLBAS lookups read local snapshots that must be "
+        "downloaded once with `threatsyft-update all`. Until then those sources return "
+        "not_found with the command in details.setup_command. Call knowledge_status to "
+        "check what is ready without making a lookup fail first."
     ),
 )
 

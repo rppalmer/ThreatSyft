@@ -47,9 +47,7 @@ def test_knowledge_status_reports_missing_snapshot(monkeypatch) -> None:
     assert result["data"]["snapshots"]["attack"]["ok"] is False
     assert result["data"]["snapshots"]["attack"]["status"] == "not_found"
     assert result["data"]["snapshots"]["attack"]["file_modified_at"] is None
-    assert result["data"]["snapshots"]["attack"]["setup_command"] == (
-        "threatsyft knowledge-update attack"
-    )
+    assert result["data"]["snapshots"]["attack"]["setup_command"] == ("threatsyft-update attack")
 
 
 def test_knowledge_status_reports_parse_error(monkeypatch, tmp_path) -> None:

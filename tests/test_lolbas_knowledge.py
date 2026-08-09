@@ -18,7 +18,7 @@ def test_load_lolbas_catalog_missing_snapshot() -> None:
         lolbas.load_lolbas_catalog(Path("tests/fixtures/missing-lolbas.json"))
     except lolbas.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "threatsyft knowledge-update lolbas"
+        assert exc.details["setup_command"] == "threatsyft-update lolbas"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 

@@ -29,7 +29,7 @@ def test_load_attack_knowledge_missing_snapshot() -> None:
         attack.load_attack_knowledge(Path("tests/fixtures/missing-attack.json"))
     except attack.KnowledgeLoadError as exc:
         assert exc.code == "not_found"
-        assert exc.details["setup_command"] == "threatsyft knowledge-update attack"
+        assert exc.details["setup_command"] == "threatsyft-update attack"
     else:
         raise AssertionError("Expected KnowledgeLoadError")
 
