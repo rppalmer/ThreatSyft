@@ -2,7 +2,7 @@
 
 ThreatSyft is a console-first Python security sidekick. It exposes focused tools through local MCP servers so an AI client, such as VS Code with MCP support, can request structured security context without getting unsafe general-purpose access to the machine.
 
-The current implementation has an enrichment server for indicator context and a knowledge server for defensive ATT&CK, D3FEND, CVE, KEV, and LOLBAS context, plus local IOC extraction. Both keep core logic separate from the MCP transport layer.
+The current implementation has an enrichment server for indicator context and a knowledge server for defensive ATT&CK, CVE, KEV, and LOLBAS context, plus local IOC extraction. Both keep core logic separate from the MCP transport layer.
 
 Public threat-report discovery, article fetching, and summarisation are deliberately **not** here. They belong to the separate net-razor project, which already owns retrieving content it did not author. ThreatSyft never fetches a URL you hand it; `extract_iocs` works on text you already have.
 
@@ -28,12 +28,9 @@ ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common
 - Local MITRE ATT&CK Enterprise technique lookup
 - Local MITRE ATT&CK Enterprise technique search
 - Local MITRE ATT&CK Enterprise tactic lookup
-- Local MITRE D3FEND defensive technique lookup
-- Local MITRE D3FEND defensive technique search
-- Local ATT&CK-to-D3FEND defensive mapping
-- Aggregate ATT&CK technique knowledge briefs
 - Targeted NVD CVE lookups
-- Aggregate vulnerability knowledge briefs
+- Single-call reference lookup across ATT&CK, KEV, LOLBAS, and NVD
+- Grouped search across ATT&CK, KEV, and LOLBAS
 - Local CISA KEV CVE lookup
 - Local CISA KEV search
 - Local LOLBAS defensive living-off-the-land lookup
@@ -97,15 +94,12 @@ The knowledge MCP server is defined in `src/threatsyft/mcp/knowledge_server.py`.
 
 It exposes defensive knowledge tools:
 
+- `lookup(reference: str)`
+- `search(query: str, source: str = "all", limit: int = 10)`
 - `attack_technique_lookup(technique_id: str)`
 - `attack_search(query: str, limit: int = 10)`
 - `attack_tactic_lookup(tactic: str)`
-- `d3fend_lookup(defense_id_or_name: str)`
-- `d3fend_search(query: str, limit: int = 10)`
-- `attack_defense_mapping(technique_id: str)`
-- `technique_brief(technique_id: str)`
 - `cve_lookup(cve_id: str)`
-- `vulnerability_brief(cve_id: str)`
 - `kev_lookup(cve_id: str)`
 - `kev_search(query: str, limit: int = 10)`
 - `lolbas_lookup(name: str)`
@@ -384,32 +378,6 @@ The input can be a short name such as `initial-access` or a display name such as
 
 Returned data includes tactic metadata and associated techniques.
 
-### `d3fend_lookup(defense_id_or_name: str)`
-
-Looks up one MITRE D3FEND defensive technique from the local snapshot.
-
-The input can be a D3FEND ID such as `D3-FA` or a defensive technique name such as `File Analysis`.
-
-Returned data includes defensive tactic, artifacts, top-level defensive technique grouping, related ATT&CK techniques, synonyms, and source metadata.
-
-### `d3fend_search(query: str, limit: int = 10)`
-
-Searches local MITRE D3FEND defensive techniques without using the network.
-
-Returned data includes compact ranked matches with D3FEND ID, name, defensive tactics, related ATT&CK technique count, and matched context.
-
-### `attack_defense_mapping(technique_id: str)`
-
-Maps one ATT&CK technique ID to related MITRE D3FEND defensive techniques using the local inferred mapping snapshot.
-
-Returned data includes the ATT&CK technique name, defensive technique count, mapped defensive techniques, defensive tactics, and artifacts.
-
-### `technique_brief(technique_id: str)`
-
-Builds a compact deterministic knowledge bundle for one ATT&CK technique.
-
-Returned data includes ATT&CK technique details, D3FEND defensive mappings, related LOLBAS entries, key points, source results, and source errors. It does not write the final investigation narrative; the agent remains responsible for interpretation.
-
 ### `cve_lookup(cve_id: str)`
 
 Looks up one CVE using the NVD CVE API.
@@ -417,12 +385,6 @@ Looks up one CVE using the NVD CVE API.
 Unlike the local snapshot tools, this is a live network lookup because a full CVE mirror would be large. It uses `NVD_API_KEY` when configured, but the key is optional.
 
 Returned data includes NVD description, publication dates, status, best available CVSS metric, weaknesses, references, affected CPEs, and CISA fields when NVD provides them.
-
-### `vulnerability_brief(cve_id: str)`
-
-Builds a compact deterministic knowledge bundle for one CVE.
-
-Returned data includes NVD CVE details when available, local CISA KEV details when present, `in_kev`, key points, source results, and source errors. It does not make the final risk decision for the agent.
 
 ### `kev_lookup(cve_id: str)`
 
@@ -487,7 +449,6 @@ Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values 
 │       │   └── whois.py
 │       ├── knowledge/
 │       │   ├── attack.py
-│       │   ├── d3fend.py
 │       │   ├── iocs.py
 │       │   ├── kev.py
 │       │   ├── lolbas.py
@@ -507,10 +468,6 @@ The current version supports these environment variables:
 - `THREATSYFT_ATTACK_STIX_URL`: source URL used by the explicit ATT&CK update command.
 - `THREATSYFT_CISA_KEV_PATH`: local CISA KEV cache path. Defaults to `~/.threatsyft/knowledge/cisa/known_exploited_vulnerabilities.json`.
 - `THREATSYFT_CISA_KEV_URL`: source URL used by the explicit CISA KEV update command.
-- `THREATSYFT_D3FEND_PATH`: local D3FEND cache path. Defaults to `~/.threatsyft/knowledge/d3fend/d3fend.json`.
-- `THREATSYFT_D3FEND_TECHNIQUES_URL`: source URL used by the explicit D3FEND update command.
-- `THREATSYFT_D3FEND_TACTICS_URL`: source URL used by the explicit D3FEND update command.
-- `THREATSYFT_D3FEND_MAPPINGS_URL`: source URL used by the explicit D3FEND update command.
 - `THREATSYFT_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
 - `THREATSYFT_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.threatsyft/knowledge/lolbas/lolbas.json`.
 - `THREATSYFT_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
@@ -618,7 +575,6 @@ Refresh a local knowledge snapshot:
 ```bash
 .venv/bin/threatsyft-update attack
 .venv/bin/threatsyft-update kev
-.venv/bin/threatsyft-update d3fend
 .venv/bin/threatsyft-update lolbas
 ```
 
@@ -655,14 +611,13 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft enrich on example.com and summarize what each source said.`
 - `Use ThreatSyft enrich on https://example.com/ and explain any disagreement between sources.`
 - `Use ThreatSyft virustotal_file_report on d41d8cd98f00b204e9800998ecf8427e.`
-- `Use ThreatSyft attack_technique_lookup on T1059 and explain the defensive context.`
-- `Use ThreatSyft technique_brief on T1059 and summarize the key defensive context.`
-- `Use ThreatSyft vulnerability_brief on CVE-2024-3400 and summarize the NVD and KEV evidence.`
-- `Use ThreatSyft kev_search for MOVEit with a limit of 5.`
+- `Use ThreatSyft lookup on T1059 and summarize what each source returned.`
+- `Use ThreatSyft lookup on CVE-2024-3400 and tell me whether it is in KEV.`
+- `Use ThreatSyft search for MOVEit and show me the matches per source.`
 - `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
 - `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 
-Prefer `enrich` for a whole picture of one indicator; reach for a provider-specific tool only when you want to isolate a single vendor's view. Use the ATT&CK, D3FEND, CVE, KEV, and LOLBAS knowledge tools when you need stable defensive context rather than provider reputation. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
+Prefer `enrich` for a whole picture of one indicator; reach for a provider-specific tool only when you want to isolate a single vendor's view. Prefer `lookup` for one reference and `search` to find candidates; the per-source tools stay available when you want a single catalog. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
 
 ## Troubleshooting
 
@@ -670,7 +625,7 @@ Prefer `enrich` for a whole picture of one indicator; reach for a provider-speci
 - `authentication_error`: the key exists but the provider rejected it.
 - `rate_limited`: wait, or use a different provider-specific tool. `cve_lookup` uses the live NVD API — set `NVD_API_KEY` in `.env` or retry later.
 - Slow RDAP or WHOIS: keep `THREATSYFT_TIMEOUT_SECONDS` at `15`, or temporarily raise it in `.env`.
-- `not_found` with a missing snapshot path from an ATT&CK, D3FEND, KEV, or LOLBAS tool: run the matching `threatsyft knowledge-update <source>` (or `all`) once, then retry. Use `knowledge-status` for a local-only readiness check.
+- `not_found` with a missing snapshot path from an ATT&CK, KEV, or LOLBAS tool: run the matching `threatsyft-update <source>` (or `all`) once, then retry. Use `knowledge_status` for a local-only readiness check.
 - MCP tools not showing in VS Code: restart the MCP servers from the Command Palette and confirm `.vscode/mcp.json` points to `${workspaceFolder}/.venv/bin/python`. For LM Studio or Cursor, confirm the configured command path runs from a terminal.
 
 ## Design Principles

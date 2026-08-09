@@ -15,7 +15,6 @@ from typing import Any
 
 from threatsyft.core import error_response, success_response
 from threatsyft.knowledge.update_attack import update_attack_snapshot
-from threatsyft.knowledge.update_d3fend import update_d3fend_snapshot
 from threatsyft.knowledge.update_kev import update_kev_snapshot
 from threatsyft.knowledge.update_lolbas import update_lolbas_snapshot
 
@@ -25,7 +24,6 @@ UpdateFunction = Callable[[], dict[str, Any]]
 
 UPDATE_FUNCTIONS: dict[str, UpdateFunction] = {
     "attack": update_attack_snapshot,
-    "d3fend": update_d3fend_snapshot,
     "kev": update_kev_snapshot,
     "lolbas": update_lolbas_snapshot,
 }
@@ -61,7 +59,7 @@ def knowledge_update(source: str) -> dict[str, Any]:
             TOOL_NAME,
             query,
             "invalid_input",
-            "Knowledge update source must be attack, d3fend, kev, lolbas, or all.",
+            "Knowledge update source must be attack, kev, lolbas, or all.",
         )
 
     results: dict[str, dict[str, Any]] = {}

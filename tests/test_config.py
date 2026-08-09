@@ -9,15 +9,11 @@ def test_default_knowledge_paths_live_under_user_home(monkeypatch, tmp_path) -> 
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.chdir(cwd)
     monkeypatch.delenv("THREATSYFT_ATTACK_STIX_PATH", raising=False)
-    monkeypatch.delenv("THREATSYFT_D3FEND_PATH", raising=False)
     monkeypatch.delenv("THREATSYFT_CISA_KEV_PATH", raising=False)
     monkeypatch.delenv("THREATSYFT_LOLBAS_PATH", raising=False)
 
     assert config.get_attack_stix_path() == (
         home / ".threatsyft" / "knowledge" / "attack" / "enterprise-attack.json"
-    )
-    assert config.get_d3fend_path() == (
-        home / ".threatsyft" / "knowledge" / "d3fend" / "d3fend.json"
     )
     assert config.get_cisa_kev_path() == (
         home / ".threatsyft" / "knowledge" / "cisa" / "known_exploited_vulnerabilities.json"

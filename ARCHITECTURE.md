@@ -40,9 +40,6 @@ It exposes read-only enrichment tools for:
 - MITRE ATT&CK Enterprise technique lookup
 - MITRE ATT&CK Enterprise technique search
 - MITRE ATT&CK Enterprise tactic lookup
-- MITRE D3FEND defensive technique lookup
-- MITRE D3FEND defensive technique search
-- ATT&CK-to-D3FEND defensive mapping
 - ATT&CK technique knowledge briefs
 - targeted NVD CVE lookup
 - vulnerability knowledge briefs
@@ -113,7 +110,6 @@ Examples:
 - defensive tradecraft and detection context
 - behavior-to-technique mapping
 
-The current knowledge MVP implements MITRE ATT&CK Enterprise lookups using a local STIX snapshot at `~/.threatsyft/knowledge/attack/enterprise-attack.json` by default, MITRE D3FEND lookups and ATT&CK-to-defense mappings using a local snapshot at `~/.threatsyft/knowledge/d3fend/d3fend.json`, targeted NVD CVE lookups, CISA KEV lookups using a local catalog snapshot at `~/.threatsyft/knowledge/cisa/known_exploited_vulnerabilities.json`, and LOLBAS lookups using a local catalog snapshot at `~/.threatsyft/knowledge/lolbas/lolbas.json`. All four paths can still be overridden with environment variables.
 
 Most runtime knowledge lookups are local-only. `cve_lookup` is intentionally live-network because a full CVE mirror is too large for this simple v1 project. Explicit update commands are responsible for downloading or refreshing local snapshots.
 

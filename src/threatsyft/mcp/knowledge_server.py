@@ -13,12 +13,7 @@ from threatsyft.knowledge.attack import (
 from threatsyft.knowledge.attack import (
     attack_technique_lookup as run_attack_technique_lookup,
 )
-from threatsyft.knowledge.briefs import technique_brief as run_technique_brief
-from threatsyft.knowledge.briefs import vulnerability_brief as run_vulnerability_brief
 from threatsyft.knowledge.cve import cve_lookup as run_cve_lookup
-from threatsyft.knowledge.d3fend import attack_defense_mapping as run_attack_defense_mapping
-from threatsyft.knowledge.d3fend import d3fend_lookup as run_d3fend_lookup
-from threatsyft.knowledge.d3fend import d3fend_search as run_d3fend_search
 from threatsyft.knowledge.iocs import extract_iocs as run_extract_iocs
 from threatsyft.knowledge.kev import kev_lookup as run_kev_lookup
 from threatsyft.knowledge.kev import kev_search as run_kev_search
@@ -32,9 +27,10 @@ mcp = FastMCP(
     "ThreatSyft Knowledge",
     instructions=(
         "Defensive security knowledge tools for stable references and vulnerability context. "
-        "Use this server for ATT&CK techniques and tactics, D3FEND defensive mappings, "
-        "CISA KEV, LOLBAS, targeted CVE metadata, and compact defensive briefs. Most "
-        "runtime lookups are local-only; cve_lookup uses the live NVD CVE API. "
+        "Prefer lookup(reference) for one CVE, ATT&CK technique or LOLBAS name: it "
+        "collects every local source covering it in one call. Prefer search(query) "
+        "to find candidates across ATT&CK, KEV and LOLBAS, grouped by source. Most "
+        "lookups are local-only; the NVD CVE API is the one live call. "
         "extract_iocs pulls typed IOC candidates out of text you already have; it does "
         "no network access and does not fetch URLs. This server does not discover or "
         "retrieve public reporting."
@@ -61,39 +57,9 @@ def attack_tactic_lookup(tactic: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def d3fend_lookup(defense_id_or_name: str) -> dict[str, Any]:
-    """Look up one MITRE D3FEND defensive technique by ID or name."""
-    return run_d3fend_lookup(defense_id_or_name)
-
-
-@mcp.tool()
-def d3fend_search(query: str, limit: int = 10) -> dict[str, Any]:
-    """Search local MITRE D3FEND defensive techniques."""
-    return run_d3fend_search(query, limit)
-
-
-@mcp.tool()
-def attack_defense_mapping(technique_id: str) -> dict[str, Any]:
-    """Map one ATT&CK technique ID to related D3FEND defensive techniques."""
-    return run_attack_defense_mapping(technique_id)
-
-
-@mcp.tool()
-def technique_brief(technique_id: str) -> dict[str, Any]:
-    """Build a compact defensive knowledge bundle for one ATT&CK technique."""
-    return run_technique_brief(technique_id)
-
-
-@mcp.tool()
 def cve_lookup(cve_id: str) -> dict[str, Any]:
     """Look up official metadata for one CVE using the live NVD CVE API."""
     return run_cve_lookup(cve_id)
-
-
-@mcp.tool()
-def vulnerability_brief(cve_id: str) -> dict[str, Any]:
-    """Build a compact CVE bundle from NVD and local KEV knowledge sources."""
-    return run_vulnerability_brief(cve_id)
 
 
 @mcp.tool()
@@ -140,7 +106,7 @@ def extract_iocs(text: str) -> dict[str, Any]:
 
 @mcp.tool()
 def knowledge_status() -> dict[str, Any]:
-    """Check ATT&CK, D3FEND, KEV, LOLBAS, and NVD snapshot readiness."""
+    """Check ATT&CK, KEV, LOLBAS, and NVD snapshot readiness."""
     return run_knowledge_status()
 
 

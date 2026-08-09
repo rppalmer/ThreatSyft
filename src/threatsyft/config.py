@@ -16,11 +16,6 @@ DEFAULT_CISA_KEV_URL = (
     "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 )
 DEFAULT_LOLBAS_URL = "https://lolbas-project.github.io/api/lolbas.json"
-DEFAULT_D3FEND_TECHNIQUES_URL = "https://d3fend.mitre.org/api/technique/all.json"
-DEFAULT_D3FEND_TACTICS_URL = "https://d3fend.mitre.org/api/tactic/all.json"
-DEFAULT_D3FEND_MAPPINGS_URL = (
-    "https://d3fend.mitre.org/api/ontology/inference/d3fend-full-mappings.json"
-)
 DEFAULT_NVD_BASE_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 DEFAULT_ABUSEIPDB_BASE_URL = "https://api.abuseipdb.com/api/v2"
 DEFAULT_GREYNOISE_BASE_URL = "https://api.greynoise.io/v3/community"
@@ -114,35 +109,6 @@ def get_lolbas_path() -> Path:
 def get_lolbas_url() -> str:
     """Return the LOLBAS JSON download URL."""
     return os.getenv("THREATSYFT_LOLBAS_URL", DEFAULT_LOLBAS_URL).strip()
-
-
-def get_d3fend_path() -> Path:
-    """Return the local D3FEND cache path."""
-    return _knowledge_path("THREATSYFT_D3FEND_PATH", "d3fend", "d3fend.json")
-
-
-def get_d3fend_techniques_url() -> str:
-    """Return the D3FEND defensive techniques download URL."""
-    return os.getenv(
-        "THREATSYFT_D3FEND_TECHNIQUES_URL",
-        DEFAULT_D3FEND_TECHNIQUES_URL,
-    ).strip()
-
-
-def get_d3fend_tactics_url() -> str:
-    """Return the D3FEND defensive tactics download URL."""
-    return os.getenv(
-        "THREATSYFT_D3FEND_TACTICS_URL",
-        DEFAULT_D3FEND_TACTICS_URL,
-    ).strip()
-
-
-def get_d3fend_mappings_url() -> str:
-    """Return the D3FEND inferred mappings download URL."""
-    return os.getenv(
-        "THREATSYFT_D3FEND_MAPPINGS_URL",
-        DEFAULT_D3FEND_MAPPINGS_URL,
-    ).strip()
 
 
 def get_nvd_base_url() -> str:

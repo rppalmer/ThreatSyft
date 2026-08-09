@@ -12,14 +12,12 @@ from threatsyft.config import (
     get_api_key,
     get_attack_stix_path,
     get_cisa_kev_path,
-    get_d3fend_path,
     get_lolbas_path,
     get_nvd_base_url,
     knowledge_update_command,
 )
 from threatsyft.core import success_response
 from threatsyft.knowledge.attack import KnowledgeLoadError, load_attack_knowledge
-from threatsyft.knowledge.d3fend import load_d3fend_catalog
 from threatsyft.knowledge.kev import load_kev_catalog
 from threatsyft.knowledge.lolbas import load_lolbas_catalog
 
@@ -37,12 +35,6 @@ def knowledge_status() -> dict[str, Any]:
             load_attack_knowledge,
             _attack_counts,
             knowledge_update_command("attack"),
-        ),
-        "d3fend": _snapshot_status(
-            get_d3fend_path(),
-            load_d3fend_catalog,
-            _d3fend_counts,
-            knowledge_update_command("d3fend"),
         ),
         "kev": _snapshot_status(
             get_cisa_kev_path(),
@@ -67,7 +59,7 @@ def knowledge_status() -> dict[str, Any]:
         {
             "local_only": True,
             "network_checked": False,
-            "scope": "ATT&CK, D3FEND, CISA KEV, LOLBAS, and NVD CVE lookup readiness.",
+            "scope": "ATT&CK, CISA KEV, LOLBAS, and NVD CVE lookup readiness.",
             "ready": not unavailable,
             "unavailable_snapshots": unavailable,
             "snapshots": snapshots,
@@ -142,14 +134,6 @@ def _attack_counts(catalog: Any) -> dict[str, int]:
     return {
         "techniques": len(catalog.techniques_by_id),
         "tactics": len(catalog.tactics_by_short_name),
-    }
-
-
-def _d3fend_counts(catalog: Any) -> dict[str, int]:
-    return {
-        "defensive_techniques": len(catalog.techniques_by_id),
-        "defensive_tactics": len(catalog.tactics_by_name),
-        "mappings": len(catalog.mappings),
     }
 
 
