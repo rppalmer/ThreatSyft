@@ -10,8 +10,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "certifi>=2026.6.17",
-    # Upper bound is deliberate: mcp 2.0.0 is a major rework of the SDK. The
-    # [cli] extra is intentionally absent; it pulls typer, rich, uvicorn and
+    # The <2 bound is load-bearing, not precautionary: mcp 2.0.0 removes
+    # mcp.server.fastmcp entirely (verified against 2.0.0 in a clean venv), and
+    # both servers are built on FastMCP. Its replacement appears to be
+    # mcp.server.mcpserver, so moving past this pin is a rewrite of the two
+    # transport modules, not a version bump.
+    #
+    # The [cli] extra is intentionally absent; it pulls typer, rich, uvicorn and
     # starlette for a command-line tool these stdio servers do not use.
     "mcp>=1.28,<2",
     "dnspython>=2.8,<3",

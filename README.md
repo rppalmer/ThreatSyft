@@ -223,6 +223,14 @@ The current version supports these environment variables:
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
 
+`requirements.lock` records the exact versions the test suite passes against, for a reproducible rebuild:
+
+```bash
+.venv/bin/python -m pip install -r requirements.lock
+```
+
+`pyproject.toml` declares the supported ranges; the lock records one resolved point inside them.
+
 The optional settings in `.env.example` are commented out on purpose. Each line shows its built-in default, so that section is documentation rather than configuration. Leave them commented unless you are changing one — an assignment with an empty value (`THREATSYFT_CISA_KEV_URL=`) is not the same as leaving a setting unset, it overrides the default with an empty string.
 
 ThreatSyft loads `.env` from the working directory if there is one, then from `~/.threatsyft/.env`. The home location is the reliable one for MCP hosts, which start the server from their own working directory.
@@ -237,10 +245,13 @@ Install the project in a virtual environment:
 python -m pip install -e .
 ```
 
-Then configure your MCP host to launch one or more of the console scripts. If the
-host does not inherit your shell `PATH`, use the absolute path to the script in
-your virtual environment, such as
-`/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp`.
+Then configure your MCP host to launch the console scripts.
+
+**Prefer the bare script name** (`threatsyft-enrichment-mcp`). It is the widest-supported form and survives moving or rebuilding the virtual environment.
+
+**Fall back to the absolute path** (`/absolute/path/to/.venv/bin/threatsyft-enrichment-mcp`, or `...\.venv\Scripts\threatsyft-enrichment-mcp.exe` on Windows) when the host does not inherit your shell `PATH`. Several GUI hosts do not. The example configs below use the absolute form because it works everywhere; shorten it if your host resolves `PATH`.
+
+ThreatSyft does not depend on the host's working directory: it loads `.env` from `~/.threatsyft/.env` as well as the working directory, so neither launch form needs a `cwd`.
 
 LM Studio and Cursor use a Cursor-style `mcp.json` with a top-level
 `mcpServers` object:

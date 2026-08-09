@@ -2,7 +2,7 @@
     "servers": {
         "threatsyft-enrichment": {
             "type": "stdio",
-            "command": "${workspaceFolder}/.venv/bin/python",
+            "command": "${command:python.interpreterPath}",
             "cwd": "${workspaceFolder}",
             "args": [
                 "-m",
@@ -20,7 +20,7 @@
         },
         "threatsyft-knowledge": {
             "type": "stdio",
-            "command": "${workspaceFolder}/.venv/bin/python",
+            "command": "${command:python.interpreterPath}",
             "cwd": "${workspaceFolder}",
             "args": [
                 "-m",

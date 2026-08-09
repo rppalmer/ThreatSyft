@@ -1,6 +1,7 @@
-# Upper bounds are deliberate: mcp 2.0.0 is a major rework of the SDK, and an
-# unpinned dependency across a known-breaking release means a fresh install is a
-# different program than the one that was tested.
+# Upper bounds are deliberate. For mcp the bound is load-bearing: 2.0.0 removes
+# mcp.server.fastmcp entirely (verified against 2.0.0 in a clean venv) and both
+# servers are built on it, so crossing this pin is a rewrite rather than an
+# upgrade. Its replacement appears to be mcp.server.mcpserver.
 #
 # The [cli] extra is intentionally absent. It pulls typer, rich, uvicorn,
 # starlette, sse-starlette, python-multipart, PyJWT and cryptography to support

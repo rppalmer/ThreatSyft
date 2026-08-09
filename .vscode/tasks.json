@@ -4,7 +4,7 @@
         {
             "label": "Install/update dependencies",
             "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
+            "command": "${command:python.interpreterPath}",
             "args": [
                 "-m",
                 "pip",
@@ -17,8 +17,10 @@
         {
             "label": "Ruff: check",
             "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/ruff",
+            "command": "${command:python.interpreterPath}",
             "args": [
+                "-m",
+                "ruff",
                 "check",
                 "."
             ],
@@ -27,8 +29,10 @@
         {
             "label": "Ruff: format check",
             "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/ruff",
+            "command": "${command:python.interpreterPath}",
             "args": [
+                "-m",
+                "ruff",
                 "format",
                 "--check",
                 "."
@@ -38,7 +42,7 @@
         {
             "label": "Pytest",
             "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
+            "command": "${command:python.interpreterPath}",
             "args": [
                 "-m",
                 "pytest"
@@ -48,7 +52,7 @@
         {
             "label": "ThreatSyft: Update knowledge snapshots",
             "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
+            "command": "${command:python.interpreterPath}",
             "args": [
                 "-m",
                 "threatsyft.update_cli",

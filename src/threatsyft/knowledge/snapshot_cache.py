@@ -33,7 +33,11 @@ def write_snapshot(path: Path, payload: Any) -> None:
     snapshot or the new one, never a half-written file. Shared by all four update
     commands so the guarantee cannot hold in some of them and not others.
     """
-    path.parent.mkdir(parents=True, exist_ok=True)
+    # 0o700 because this tree lives beside ~/.threatsyft/.env. The catalogs
+    # themselves are public, so this is about the directory's neighbours rather
+    # than the data. mode applies only to directories this call creates; an
+    # existing one keeps its mode.
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     temporary_path = path.with_name(f"{path.name}.tmp")
     temporary_path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
