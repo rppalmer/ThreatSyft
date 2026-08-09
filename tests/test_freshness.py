@@ -124,3 +124,30 @@ def test_as_of_is_a_parseable_timestamp() -> None:
     assert datetime.fromisoformat(as_of) < datetime.now(
         datetime.now().astimezone().tzinfo
     ) + timedelta(seconds=1)
+
+
+def test_every_lookup_and_search_source_has_freshness_configured() -> None:
+    """A source added to lookup or search must not silently lose its age."""
+    from threatsyft.knowledge.freshness import SOURCE_SNAPSHOTS
+    from threatsyft.knowledge.lookup import SEARCH_SOURCES
+
+    live_sources = {"nvd"}
+    names = set(SEARCH_SOURCES) | {
+        "attack_technique",
+        "attack_tactic",
+        "attack_mitigation",
+        "attack_actor",
+        "lolbas",
+        "kev",
+    }
+
+    assert names - live_sources <= set(SOURCE_SNAPSHOTS)
+
+
+def test_source_names_sharing_a_snapshot_report_the_same_age() -> None:
+    ages = {
+        source: snapshot_freshness(source)["as_of"]
+        for source in ["attack", "attack_technique", "attack_tactic", "attack_actor"]
+    }
+
+    assert len(set(ages.values())) == 1, ages
