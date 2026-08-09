@@ -405,3 +405,4 @@ For durable design context, see:
 
 - `ARCHITECTURE.md` for MCP server boundaries, the response contract, and the reasoning behind both.
 - `AGENTS.md` for standing instructions to future coding agents.
+- `docs/testing.md` for the end-to-end checklist: setup states, agent prompts, and failure injection the hermetic suite cannot cover.

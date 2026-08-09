@@ -187,3 +187,54 @@ def test_alienvault_indicator_lookup_unexpected_json_shape(monkeypatch) -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "parse_error"
+
+
+def test_pulse_tags_are_capped_with_the_total_reported(monkeypatch) -> None:
+    """OTX tags are community-submitted and unbounded; some pulses carry hundreds."""
+    monkeypatch.setenv("ALIENVAULT_API_KEY", "test-key")
+    payload = {
+        "pulse_info": {
+            "count": 1,
+            "pulses": [
+                {
+                    "id": "p1",
+                    "name": "Noisy pulse",
+                    "tags": [f"tag-{index:03d}" for index in range(250)],
+                }
+            ],
+        }
+    }
+    monkeypatch.setattr(
+        alienvault.httpx,
+        "get",
+        lambda *a, **k: httpx.Response(
+            200, request=httpx.Request("GET", "https://otx.test"), json=payload
+        ),
+    )
+
+    pulse = alienvault.alienvault_indicator_lookup("example.com")["data"]["pulses"][0]
+
+    assert len(pulse["tags"]) == alienvault.MAX_TAGS_PER_PULSE
+    assert pulse["tag_count"] == 250
+
+
+def test_pulses_are_capped(monkeypatch) -> None:
+    monkeypatch.setenv("ALIENVAULT_API_KEY", "test-key")
+    payload = {
+        "pulse_info": {
+            "count": 99,
+            "pulses": [{"id": f"p{index}", "name": "x"} for index in range(40)],
+        }
+    }
+    monkeypatch.setattr(
+        alienvault.httpx,
+        "get",
+        lambda *a, **k: httpx.Response(
+            200, request=httpx.Request("GET", "https://otx.test"), json=payload
+        ),
+    )
+
+    data = alienvault.alienvault_indicator_lookup("example.com")["data"]
+
+    assert len(data["pulses"]) == alienvault.MAX_PULSES
+    assert data["pulse_count"] == 99, "the true total must survive the cap"

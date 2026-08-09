@@ -25,6 +25,10 @@ from threatsyft.enrichment.models import (
 TOOL_NAME = "alienvault_indicator_lookup"
 API_KEY_NAME = "ALIENVAULT_API_KEY"
 PROVIDER = "AlienVault OTX"
+MAX_PULSES = 10
+# OTX pulse tags are community-submitted and unbounded; single pulses carry
+# hundreds, which made this the largest source in any enrich response.
+MAX_TAGS_PER_PULSE = 10
 
 
 def alienvault_indicator_lookup(indicator: str) -> dict[str, Any]:
@@ -122,7 +126,7 @@ def _compact_pulses(value: object) -> list[dict[str, Any]]:
         return []
 
     pulses: list[dict[str, Any]] = []
-    for item in value[:10]:
+    for item in value[:MAX_PULSES]:
         if not isinstance(item, dict):
             continue
         pulse = {
@@ -131,8 +135,11 @@ def _compact_pulses(value: object) -> list[dict[str, Any]]:
             "created": item.get("created"),
             "modified": item.get("modified"),
             "tlp": item.get("TLP") or item.get("tlp"),
-            "tags": _sorted_strings(item.get("tags")),
+            "tags": _sorted_strings(item.get("tags"))[:MAX_TAGS_PER_PULSE],
         }
+        tag_total = len(_sorted_strings(item.get("tags")))
+        if tag_total > MAX_TAGS_PER_PULSE:
+            pulse["tag_count"] = tag_total
         pulses.append({key: value for key, value in pulse.items() if value not in (None, [])})
     return pulses
 
