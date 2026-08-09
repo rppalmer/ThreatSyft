@@ -223,6 +223,10 @@ The current version supports these environment variables:
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
 
+The optional settings in `.env.example` are commented out on purpose. Each line shows its built-in default, so that section is documentation rather than configuration. Leave them commented unless you are changing one — an assignment with an empty value (`THREATSYFT_CISA_KEV_URL=`) is not the same as leaving a setting unset, it overrides the default with an empty string.
+
+ThreatSyft loads `.env` from the working directory if there is one, then from `~/.threatsyft/.env`. The home location is the reliable one for MCP hosts, which start the server from their own working directory.
+
 ## Host Compatibility
 
 ThreatSyft works with MCP hosts that can launch local stdio servers. The server code is host-generic; the only host-specific part is the configuration file format.

@@ -150,8 +150,11 @@ def attack_tactic_lookup(tactic: str) -> dict[str, Any]:
         )
 
     query["tactic"] = tactic_item.short_name
+    # Identity only. A tactic holds dozens of techniques, and a full summary
+    # each made this the largest response in the project; call lookup on any of
+    # them for the detail.
     techniques = [
-        _technique_summary(technique, knowledge)
+        _technique_ref(technique)
         for technique in sorted(
             knowledge.techniques_by_id.values(),
             key=lambda item: item.technique_id,

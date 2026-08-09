@@ -56,6 +56,21 @@ def _load_environment() -> None:
 _load_environment()
 
 
+def _setting(name: str, default: str) -> str:
+    """Return an environment override, treating blank as unset.
+
+    ``os.getenv(name, default)`` returns "" for a variable that is set but
+    empty, so the default never applies. That is exactly what ``.env.example``
+    produces: it lists every optional setting with an empty value, so copying it
+    to ``.env`` silently blanked every URL in the project. Found end to end,
+    when a snapshot download failed with an empty source URL.
+    """
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip() or default
+
+
 def get_timeout_seconds() -> float:
     """Return the network timeout configured for enrichment lookups."""
     raw_value = os.getenv("THREATSYFT_TIMEOUT_SECONDS")
@@ -84,7 +99,7 @@ def get_attack_stix_path() -> Path:
 
 def get_attack_stix_url() -> str:
     """Return the ATT&CK Enterprise STIX download URL."""
-    return os.getenv("THREATSYFT_ATTACK_STIX_URL", DEFAULT_ATTACK_STIX_URL).strip()
+    return _setting("THREATSYFT_ATTACK_STIX_URL", DEFAULT_ATTACK_STIX_URL).strip()
 
 
 def get_cisa_kev_path() -> Path:
@@ -98,7 +113,7 @@ def get_cisa_kev_path() -> Path:
 
 def get_cisa_kev_url() -> str:
     """Return the CISA KEV download URL."""
-    return os.getenv("THREATSYFT_CISA_KEV_URL", DEFAULT_CISA_KEV_URL).strip()
+    return _setting("THREATSYFT_CISA_KEV_URL", DEFAULT_CISA_KEV_URL).strip()
 
 
 def get_lolbas_path() -> Path:
@@ -108,12 +123,12 @@ def get_lolbas_path() -> Path:
 
 def get_lolbas_url() -> str:
     """Return the LOLBAS JSON download URL."""
-    return os.getenv("THREATSYFT_LOLBAS_URL", DEFAULT_LOLBAS_URL).strip()
+    return _setting("THREATSYFT_LOLBAS_URL", DEFAULT_LOLBAS_URL).strip()
 
 
 def get_nvd_base_url() -> str:
     """Return the NVD CVE API base URL."""
-    return os.getenv("THREATSYFT_NVD_BASE_URL", DEFAULT_NVD_BASE_URL).rstrip("/")
+    return _setting("THREATSYFT_NVD_BASE_URL", DEFAULT_NVD_BASE_URL).rstrip("/")
 
 
 def get_api_key(name: str) -> str | None:
@@ -128,53 +143,45 @@ def get_api_key(name: str) -> str | None:
 
 def get_abuseipdb_base_url() -> str:
     """Return the AbuseIPDB API base URL."""
-    return os.getenv("THREATSYFT_ABUSEIPDB_BASE_URL", DEFAULT_ABUSEIPDB_BASE_URL).rstrip("/")
+    return _setting("THREATSYFT_ABUSEIPDB_BASE_URL", DEFAULT_ABUSEIPDB_BASE_URL).rstrip("/")
 
 
 def get_greynoise_base_url() -> str:
     """Return the GreyNoise Community API base URL."""
-    return os.getenv("THREATSYFT_GREYNOISE_BASE_URL", DEFAULT_GREYNOISE_BASE_URL).rstrip("/")
+    return _setting("THREATSYFT_GREYNOISE_BASE_URL", DEFAULT_GREYNOISE_BASE_URL).rstrip("/")
 
 
 def get_virustotal_base_url() -> str:
     """Return the VirusTotal API base URL."""
-    return os.getenv(
-        "THREATSYFT_VIRUSTOTAL_BASE_URL",
-        DEFAULT_VIRUSTOTAL_BASE_URL,
-    ).rstrip("/")
+    return _setting("THREATSYFT_VIRUSTOTAL_BASE_URL", DEFAULT_VIRUSTOTAL_BASE_URL).rstrip("/")
 
 
 def get_shodan_base_url() -> str:
     """Return the Shodan API base URL."""
-    return os.getenv("THREATSYFT_SHODAN_BASE_URL", DEFAULT_SHODAN_BASE_URL).rstrip("/")
+    return _setting("THREATSYFT_SHODAN_BASE_URL", DEFAULT_SHODAN_BASE_URL).rstrip("/")
 
 
 def get_securitytrails_base_url() -> str:
     """Return the SecurityTrails API base URL."""
-    return os.getenv(
-        "THREATSYFT_SECURITYTRAILS_BASE_URL",
-        DEFAULT_SECURITYTRAILS_BASE_URL,
-    ).rstrip("/")
+    return _setting("THREATSYFT_SECURITYTRAILS_BASE_URL", DEFAULT_SECURITYTRAILS_BASE_URL).rstrip(
+        "/"
+    )
 
 
 def get_ipgeolocation_base_url() -> str:
     """Return the IPGeolocation.io API base URL."""
-    return os.getenv(
-        "THREATSYFT_IPGEOLOCATION_BASE_URL",
-        DEFAULT_IPGEOLOCATION_BASE_URL,
-    ).rstrip("/")
+    return _setting("THREATSYFT_IPGEOLOCATION_BASE_URL", DEFAULT_IPGEOLOCATION_BASE_URL).rstrip("/")
 
 
 def get_alienvault_base_url() -> str:
     """Return the AlienVault OTX API base URL."""
-    return os.getenv("THREATSYFT_ALIENVAULT_BASE_URL", DEFAULT_ALIENVAULT_BASE_URL).rstrip("/")
+    return _setting("THREATSYFT_ALIENVAULT_BASE_URL", DEFAULT_ALIENVAULT_BASE_URL).rstrip("/")
 
 
 def get_google_safebrowsing_base_url() -> str:
     """Return the Google Safe Browsing API base URL."""
-    return os.getenv(
-        "THREATSYFT_GOOGLE_SAFEBROWSING_BASE_URL",
-        DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL,
+    return _setting(
+        "THREATSYFT_GOOGLE_SAFEBROWSING_BASE_URL", DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL
     ).rstrip("/")
 
 

@@ -196,3 +196,11 @@ def test_mitigation_lookup_rejects_a_malformed_id(attack_snapshot) -> None:
 
 def test_mitigation_lookup_reports_an_unknown_id_as_not_found(attack_snapshot) -> None:
     assert attack.attack_mitigation_lookup("M9999")["error"]["code"] == "not_found"
+
+
+def test_tactic_technique_list_is_trimmed_to_identity(attack_snapshot) -> None:
+    """A tactic holds dozens of techniques; a full summary each made it the largest response."""
+    data = attack.attack_tactic_lookup("execution")["data"]
+
+    for technique in data["techniques"]:
+        assert set(technique) == {"technique_id", "name"}
