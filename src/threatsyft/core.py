@@ -9,6 +9,7 @@ as enrichment does.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -48,6 +49,36 @@ class ToolResponse(BaseModel):
     query: dict[str, Any] = Field(default_factory=dict)
     data: dict[str, Any] | None = None
     error: ToolError | None = None
+
+
+def build_sources(
+    results: Iterable[tuple[str, dict[str, Any]]],
+) -> tuple[dict[str, dict[str, Any]], dict[str, int]]:
+    """Build the shared ``sources`` map and its summary from source envelopes.
+
+    One shape for every collection tool, so a caller written against ``enrich``
+    iterates ``lookup`` and ``search`` unchanged. Every entry looks the same
+    whether the source succeeded or not, which is what lets a consumer iterate
+    one structure instead of correlating a results map against an errors list.
+
+    ``source_summary`` exists so a node can answer "did anything work?" without
+    iterating at all.
+    """
+    sources: dict[str, dict[str, Any]] = {}
+    for name, envelope in results:
+        if envelope.get("ok") is True and isinstance(envelope.get("data"), dict):
+            sources[name] = {"ok": True, "data": envelope["data"]}
+            continue
+
+        error = envelope.get("error") if isinstance(envelope.get("error"), dict) else {}
+        sources[name] = {
+            "ok": False,
+            "code": error.get("code", "unexpected_error"),
+            "message": error.get("message", "Source lookup failed."),
+        }
+
+    succeeded = sum(1 for entry in sources.values() if entry["ok"])
+    return sources, {"ok": succeeded, "failed": len(sources) - succeeded}
 
 
 def success_response(tool: str, query: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:

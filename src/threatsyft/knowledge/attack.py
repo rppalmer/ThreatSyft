@@ -109,7 +109,7 @@ def attack_search(query: str, limit: int = 10) -> dict[str, Any]:
 
     response_query["query"] = normalized_query
     response_query["limit"] = normalized_limit
-    matches = _search_techniques(knowledge, normalized_query, normalized_limit)
+    match_count, matches = _search_techniques(knowledge, normalized_query, normalized_limit)
 
     return success_response(
         "attack_search",
@@ -117,7 +117,8 @@ def attack_search(query: str, limit: int = 10) -> dict[str, Any]:
         {
             "query": normalized_query,
             "limit": normalized_limit,
-            "match_count": len(matches),
+            "match_count": match_count,
+            "returned": len(matches),
             "matches": matches,
             "snapshot_path": str(knowledge.path),
         },
@@ -431,7 +432,13 @@ def _search_techniques(
     knowledge: AttackKnowledge,
     query: str,
     limit: int,
-) -> list[dict[str, Any]]:
+) -> tuple[int, list[dict[str, Any]]]:
+    """Return the total number of matches and the limited slice of them.
+
+    The total is counted before the limit is applied, so a caller can tell
+    10-of-11 from 10-of-400 instead of seeing a count that always equals the
+    number of rows it was handed.
+    """
     query_lower = query.lower()
     scored: list[tuple[int, Technique]] = []
 
@@ -441,7 +448,7 @@ def _search_techniques(
             scored.append((score, technique))
 
     scored.sort(key=lambda item: (-item[0], item[1].technique_id))
-    return [
+    return len(scored), [
         {
             **_technique_summary(technique, knowledge),
             "score": score,

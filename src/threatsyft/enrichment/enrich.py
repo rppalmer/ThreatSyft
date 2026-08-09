@@ -12,8 +12,8 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from threatsyft.core import build_sources
 from threatsyft.enrichment.abuseipdb import abuseipdb_check_ip
-from threatsyft.enrichment.aggregate import run_providers
 from threatsyft.enrichment.alienvault import alienvault_indicator_lookup
 from threatsyft.enrichment.dns import dns_lookup
 from threatsyft.enrichment.greynoise import greynoise_ip_context
@@ -35,6 +35,7 @@ from threatsyft.enrichment.virustotal import (
     virustotal_url_report,
 )
 from threatsyft.enrichment.whois import whois_lookup
+from threatsyft.fanout import run_sources
 
 TOOL_NAME = "enrich"
 
@@ -96,23 +97,8 @@ def enrich(indicator: str) -> dict[str, Any]:
         return error_response(TOOL_NAME, query, "invalid_input", str(exc))
 
     query["indicator"] = normalized
-    sources = DISPATCH[indicator_type]
-    results, errors = run_providers(sources, normalized)
-    errors_by_source = {error["provider"]: error for error in errors}
+    source_entries, summary = build_sources(run_sources(DISPATCH[indicator_type], normalized))
 
-    source_entries: dict[str, dict[str, Any]] = {}
-    for name, _ in sources:
-        if name in results:
-            source_entries[name] = {"ok": True, "data": results[name]}
-            continue
-        error = errors_by_source[name]
-        source_entries[name] = {
-            "ok": False,
-            "code": error["code"],
-            "message": error["message"],
-        }
-
-    succeeded = sum(1 for entry in source_entries.values() if entry["ok"])
     return success_response(
         TOOL_NAME,
         query,
@@ -122,7 +108,7 @@ def enrich(indicator: str) -> dict[str, Any]:
             # `indicator: str` argument cannot catch what separate `ip` and
             # `domain` parameters used to.
             "indicator_type": indicator_type,
-            "source_summary": {"ok": succeeded, "failed": len(source_entries) - succeeded},
+            "source_summary": summary,
             "sources": source_entries,
         },
     )
@@ -131,15 +117,9 @@ def enrich(indicator: str) -> dict[str, Any]:
 def _wrong_tool_error(indicator: str, query: dict[str, Any]) -> dict[str, Any] | None:
     value = indicator.strip()
     if CVE_PATTERN.fullmatch(value):
-        return _redirect(query, value, "cve", "a vulnerability reference", "cve_lookup")
+        return _redirect(query, value, "cve", "a vulnerability reference")
     if TECHNIQUE_PATTERN.fullmatch(value):
-        return _redirect(
-            query,
-            value,
-            "attack_technique",
-            "an ATT&CK technique reference",
-            "attack_technique_lookup",
-        )
+        return _redirect(query, value, "attack_technique", "an ATT&CK technique reference")
     return None
 
 
@@ -148,19 +128,12 @@ def _redirect(
     value: str,
     detected_type: str,
     description: str,
-    suggested_tool: str,
 ) -> dict[str, Any]:
-    """Name a tool that exists today.
-
-    §3.4 shows ``suggested_tool: "lookup"``, but that tool does not exist until
-    Phase 3 collapses the reference surface. A redirect naming a tool the host
-    cannot call is worse than no redirect, so this points at the current tools
-    and changes to ``lookup`` when ``lookup`` is real.
-    """
+    """Turn a dead end into a redirect naming the tool that does handle this."""
     return error_response(
         TOOL_NAME,
         query,
         "invalid_input",
         f"{value} is {description}, not an enrichable indicator.",
-        {"detected_type": detected_type, "suggested_tool": suggested_tool},
+        {"detected_type": detected_type, "suggested_tool": "lookup"},
     )

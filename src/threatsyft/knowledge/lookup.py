@@ -1,0 +1,186 @@
+"""Single-call reference lookup and search across the local knowledge sources.
+
+Collection, not judgement, and the same ``sources`` shape ``enrich`` returns, so
+a caller written against one iterates the other unchanged.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from threatsyft.core import InputValidationError, build_sources, error_response, success_response
+
+# Importing the indicator classifier is not a boundary violation: the strict
+# boundary in this design is MCP-to-MCP, and models.py is pure validation with
+# no keys, no network and no provider imports. Reimplementing IP/URL/hash
+# detection here would be more code and would drift.
+from threatsyft.enrichment.models import classify_indicator
+from threatsyft.fanout import run_sources
+from threatsyft.knowledge.attack import attack_search as run_attack_search
+from threatsyft.knowledge.attack import attack_technique_lookup, normalize_technique_id
+from threatsyft.knowledge.cve import cve_lookup, normalize_cve_id
+from threatsyft.knowledge.kev import kev_lookup
+from threatsyft.knowledge.kev import kev_search as run_kev_search
+from threatsyft.knowledge.lolbas import lolbas_lookup
+from threatsyft.knowledge.lolbas import lolbas_search as run_lolbas_search
+
+LOOKUP_TOOL_NAME = "lookup"
+SEARCH_TOOL_NAME = "search"
+
+CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
+TECHNIQUE_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
+
+# How many LOLBAS hits to attach when looking up an ATT&CK technique. This is a
+# supporting cross-reference, not the answer, so it stays small.
+TECHNIQUE_LOLBAS_LIMIT = 5
+
+SEARCH_SOURCES = {
+    "attack": run_attack_search,
+    "kev": run_kev_search,
+    "lolbas": run_lolbas_search,
+}
+
+
+def lookup(reference: str) -> dict[str, Any]:
+    """Classify one reference and collect every local source that covers it."""
+    query = {"reference": reference}
+    value = reference.strip()
+    if not value:
+        return error_response(
+            LOOKUP_TOOL_NAME, query, "invalid_input", "Reference must not be empty."
+        )
+
+    redirect = _wrong_tool_error(value, query)
+    if redirect:
+        return redirect
+
+    try:
+        reference_type, normalized, sources = _classify_reference(value)
+    except InputValidationError as exc:
+        return error_response(LOOKUP_TOOL_NAME, query, "invalid_input", str(exc))
+
+    query["reference"] = normalized
+    source_entries, summary = build_sources(run_sources(sources, normalized))
+
+    return success_response(
+        LOOKUP_TOOL_NAME,
+        query,
+        {
+            "reference": normalized,
+            "reference_type": reference_type,
+            "source_summary": summary,
+            "sources": source_entries,
+        },
+    )
+
+
+def search(query: str, source: str = "all", limit: int = 10) -> dict[str, Any]:
+    """Search the local catalogs, grouped by source and never merge-ranked.
+
+    ATT&CK techniques, KEV entries and LOLBAS binaries share almost no fields,
+    and their three scoring functions produce numbers on unrelated scales.
+    Merging them into one ranked list would invent a precision that does not
+    exist, so results stay grouped by source.
+
+    ``limit`` applies per source, so ``source="all"`` does not silently return
+    three times the requested rows.
+    """
+    response_query: dict[str, Any] = {"query": query, "source": source, "limit": limit}
+
+    if not query.strip():
+        return error_response(
+            SEARCH_TOOL_NAME, response_query, "invalid_input", "Search query must not be empty."
+        )
+
+    selected = _selected_sources(source)
+    if selected is None:
+        return error_response(
+            SEARCH_TOOL_NAME,
+            response_query,
+            "invalid_input",
+            f"Source must be one of: all, {', '.join(SEARCH_SOURCES)}.",
+            {"valid_sources": ["all", *SEARCH_SOURCES]},
+        )
+
+    results = [(name, SEARCH_SOURCES[name](query, limit)) for name in selected]
+    source_entries, summary = build_sources(results)
+
+    # Lift the per-source counts up beside the matches so a caller can see how
+    # much it is not being shown without reaching into each source's payload.
+    for entry in source_entries.values():
+        if entry["ok"]:
+            data = entry.pop("data")
+            entry["match_count"] = data.get("match_count", 0)
+            entry["returned"] = data.get("returned", len(data.get("matches", [])))
+            entry["matches"] = data.get("matches", [])
+
+    return success_response(
+        SEARCH_TOOL_NAME,
+        response_query,
+        {
+            "query": query.strip(),
+            "source_summary": summary,
+            "sources": source_entries,
+        },
+    )
+
+
+def _classify_reference(value: str) -> tuple[str, str, tuple[tuple[str, Any], ...]]:
+    """Return the reference type, its normalized form, and the sources covering it."""
+    if CVE_PATTERN.fullmatch(value):
+        return (
+            "cve",
+            normalize_cve_id(value),
+            (("nvd", cve_lookup), ("kev", kev_lookup)),
+        )
+
+    if TECHNIQUE_PATTERN.fullmatch(value):
+        return (
+            "attack_technique",
+            normalize_technique_id(value),
+            (
+                ("attack", attack_technique_lookup),
+                ("lolbas", lambda v: run_lolbas_search(v, TECHNIQUE_LOLBAS_LIMIT)),
+            ),
+        )
+
+    return "lolbas_name", value, (("lolbas", lolbas_lookup),)
+
+
+def _selected_sources(source: str) -> list[str] | None:
+    normalized = source.strip().lower()
+    if normalized in {"", "all"}:
+        return list(SEARCH_SOURCES)
+    if normalized in SEARCH_SOURCES:
+        return [normalized]
+    return None
+
+
+def _wrong_tool_error(value: str, query: dict[str, Any]) -> dict[str, Any] | None:
+    """Point an enrichable indicator at the tool that handles it.
+
+    The symmetric case of ``enrich``'s redirect: a caller that reached for the
+    wrong one of the two collection tools gets told which one is right, rather
+    than an unhelpful "not found".
+    """
+    if CVE_PATTERN.fullmatch(value) or TECHNIQUE_PATTERN.fullmatch(value):
+        return None
+
+    try:
+        indicator_type, _ = classify_indicator(value)
+    except InputValidationError:
+        return None
+
+    if indicator_type == "domain":
+        # A LOLBAS binary name looks enough like a domain that rejecting it here
+        # would break the tool's main case. Let the lolbas lookup answer.
+        return None
+
+    return error_response(
+        LOOKUP_TOOL_NAME,
+        query,
+        "invalid_input",
+        f"{value} is an enrichable indicator, not a reference.",
+        {"detected_type": indicator_type, "suggested_tool": "enrich"},
+    )

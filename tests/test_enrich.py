@@ -196,20 +196,20 @@ def test_invalid_input_is_a_tool_failure() -> None:
 
 
 @pytest.mark.parametrize(
-    ("value", "detected_type", "suggested_tool"),
+    ("value", "detected_type"),
     [
-        ("CVE-2024-1234", "cve", "cve_lookup"),
-        ("T1059", "attack_technique", "attack_technique_lookup"),
-        ("T1059.001", "attack_technique", "attack_technique_lookup"),
+        ("CVE-2024-1234", "cve"),
+        ("T1059", "attack_technique"),
+        ("T1059.001", "attack_technique"),
     ],
 )
-def test_right_input_wrong_tool_redirects(value, detected_type, suggested_tool) -> None:
+def test_right_input_wrong_tool_redirects(value, detected_type) -> None:
     result = enrich(value)
 
     assert result["ok"] is False
     assert result["error"]["code"] == "invalid_input"
     assert result["error"]["details"]["detected_type"] == detected_type
-    assert result["error"]["details"]["suggested_tool"] == suggested_tool
+    assert result["error"]["details"]["suggested_tool"] == "lookup"
 
 
 def test_some_sources_failing_is_still_a_successful_call(monkeypatch) -> None:

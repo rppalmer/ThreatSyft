@@ -24,6 +24,8 @@ from threatsyft.knowledge.kev import kev_lookup as run_kev_lookup
 from threatsyft.knowledge.kev import kev_search as run_kev_search
 from threatsyft.knowledge.lolbas import lolbas_lookup as run_lolbas_lookup
 from threatsyft.knowledge.lolbas import lolbas_search as run_lolbas_search
+from threatsyft.knowledge.lookup import lookup as run_lookup
+from threatsyft.knowledge.lookup import search as run_search
 from threatsyft.knowledge.status import knowledge_status as run_knowledge_status
 
 mcp = FastMCP(
@@ -116,6 +118,18 @@ def lolbas_lookup(name: str) -> dict[str, Any]:
 def lolbas_search(query: str, limit: int = 10) -> dict[str, Any]:
     """Search the local LOLBAS catalog."""
     return run_lolbas_search(query, limit)
+
+
+@mcp.tool()
+def lookup(reference: str) -> dict[str, Any]:
+    """Collect every local source covering one CVE, ATT&CK technique, or LOLBAS name."""
+    return run_lookup(reference)
+
+
+@mcp.tool()
+def search(query: str, source: str = "all", limit: int = 10) -> dict[str, Any]:
+    """Search ATT&CK, KEV, and LOLBAS, grouped by source. limit applies per source."""
+    return run_search(query, source, limit)
 
 
 @mcp.tool()

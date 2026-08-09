@@ -100,7 +100,7 @@ def kev_search(query: str, limit: int = 10) -> dict[str, Any]:
 
     response_query["query"] = normalized_query
     response_query["limit"] = normalized_limit
-    matches = _search_entries(catalog, normalized_query, normalized_limit)
+    match_count, matches = _search_entries(catalog, normalized_query, normalized_limit)
 
     return success_response(
         "kev_search",
@@ -108,7 +108,8 @@ def kev_search(query: str, limit: int = 10) -> dict[str, Any]:
         {
             "query": normalized_query,
             "limit": normalized_limit,
-            "match_count": len(matches),
+            "match_count": match_count,
+            "returned": len(matches),
             "matches": matches,
             "catalog": _catalog_metadata(catalog),
             "snapshot_path": str(catalog.path),
@@ -200,7 +201,12 @@ def _parse_entry(item: dict[str, Any]) -> KevEntry | None:
     )
 
 
-def _search_entries(catalog: KevCatalog, query: str, limit: int) -> list[dict[str, Any]]:
+def _search_entries(
+    catalog: KevCatalog,
+    query: str,
+    limit: int,
+) -> tuple[int, list[dict[str, Any]]]:
+    """Return the total number of matches and the limited slice of them."""
     query_lower = query.lower()
     scored: list[tuple[int, KevEntry]] = []
 
@@ -210,7 +216,7 @@ def _search_entries(catalog: KevCatalog, query: str, limit: int) -> list[dict[st
             scored.append((score, entry))
 
     scored.sort(key=lambda item: (-item[0], item[1].cve_id))
-    return [
+    return len(scored), [
         {
             **_entry_data(entry),
             "score": score,
