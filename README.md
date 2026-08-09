@@ -71,24 +71,10 @@ Errors use the same shape, which makes results easier for humans and AI clients 
 
 The enrichment MCP server is defined in `src/threatsyft/mcp/enrichment_server.py`.
 
-It exposes focused read-only tools:
+It exposes two tools:
 
-- `enrichment_status()`
-- `dns_lookup(domain: str)`
-- `rdap_lookup(target: str)`
-- `whois_lookup(target: str)`
-- `abuseipdb_check_ip(ip: str, max_age_days: int = 90)`
-- `greynoise_ip_context(ip: str)`
-- `virustotal_ip_report(ip: str)`
-- `virustotal_domain_report(domain: str)`
-- `virustotal_url_report(url: str)`
-- `virustotal_file_report(file_hash: str)`
-- `securitytrails_domain_lookup(domain: str)`
-- `shodan_host_lookup(ip: str)`
-- `ipgeolocation_lookup(ip: str)`
-- `alienvault_indicator_lookup(indicator: str)`
-- `google_safebrowsing_check_url(url: str)`
 - `enrich(indicator: str)`
+- `enrichment_status()`
 
 The knowledge MCP server is defined in `src/threatsyft/mcp/knowledge_server.py`.
 
@@ -121,206 +107,7 @@ The MCP layers are deliberately thin. They register tools and pass requests to c
 
 Checks local enrichment provider configuration without calling external providers.
 
-Returned data includes provider tool names, API-key presence booleans, the configured and missing key lists across every provider, and `secret_values_returned: false`.
-
-### `dns_lookup(domain: str)`
-
-Looks up common DNS records for a domain.
-
-Supported record types:
-
-- `A`
-- `AAAA`
-- `MX`
-- `NS`
-- `TXT`
-
-The input must be a domain name, not a URL. For example, use `example.com`, not `https://example.com`.
-
-### `rdap_lookup(target: str)`
-
-Looks up compact RDAP details for a domain or IP address.
-
-Returned data includes fields such as:
-
-- target type
-- handle
-- name
-- country
-- status
-- entities
-- nameservers
-- events
-- source URL
-
-### `whois_lookup(target: str)`
-
-Looks up WHOIS information for a domain or IP address.
-
-Domain lookups use `python-whois`. IP lookups use `ipwhois` with a certifi-backed HTTPS opener so RDAP-based IP WHOIS works reliably on macOS Python environments.
-
-### `abuseipdb_check_ip(ip: str, max_age_days: int = 90)`
-
-Checks AbuseIPDB reputation for one IP address.
-
-Returned data may include:
-
-- abuse confidence score
-- report count
-- distinct reporter count
-- country and ISP context
-- Tor and whitelist flags
-- last reported timestamp
-- a light verdict
-
-### `greynoise_ip_context(ip: str)`
-
-Checks GreyNoise context for one IP address.
-
-Returned data may include:
-
-- whether the IP is observed as internet noise
-- whether the IP is part of RIOT/business-service data
-- provider classification
-- name
-- last seen timestamp
-- provider link
-- a light verdict
-
-### `virustotal_ip_report(ip: str)`
-
-Fetches a compact VirusTotal report for one IP address.
-
-Returned data may include:
-
-- ASN and owner
-- country and network context
-- reputation
-- last analysis stats
-- total community votes
-- tags
-- provider link
-- a light verdict
-
-### `virustotal_domain_report(domain: str)`
-
-Fetches a compact VirusTotal report for one domain.
-
-Returned data may include:
-
-- reputation
-- registrar
-- creation and WHOIS dates
-- last analysis stats
-- recent DNS records
-- categories
-- community votes
-- tags
-- provider link
-- a light verdict
-
-### `virustotal_url_report(url: str)`
-
-Fetches a compact VirusTotal report for one URL.
-
-Returned data may include:
-
-- final URL
-- title
-- reputation
-- last analysis stats
-- categories
-- community votes
-- first and last submission dates
-- last HTTP response code
-- provider link
-- a light verdict
-
-### `virustotal_file_report(file_hash: str)`
-
-Fetches a compact VirusTotal report for one MD5, SHA1, or SHA256 file hash.
-
-Returned data may include:
-
-- MD5, SHA1, and SHA256 values
-- meaningful file name
-- file names
-- file type and size
-- reputation
-- last analysis stats
-- signature info
-- tags
-- provider link
-- a light verdict
-
-### `securitytrails_domain_lookup(domain: str)`
-
-Fetches compact SecurityTrails domain intelligence for one domain.
-
-Returned data may include:
-
-- hostname and apex domain
-- Alexa rank when available
-- current DNS records
-- compact WHOIS fields
-- provider link
-
-### `shodan_host_lookup(ip: str)`
-
-Fetches passive Shodan host information for one IP address.
-
-Returned data may include:
-
-- organization, ISP, and ASN
-- country, region, and city
-- hostnames and domains
-- observed ports
-- observed services
-- vulnerabilities reported by Shodan
-- last update timestamp
-- provider link
-- a light verdict
-
-### `ipgeolocation_lookup(ip: str)`
-
-Looks up best-effort IP geolocation details for one IP address using IPGeolocation.io.
-
-Returned data may include:
-
-- country, region, city, and postal code
-- latitude and longitude
-- time zone
-- ASN
-- ISP and organization
-- provider link
-- approximation note
-
-### `alienvault_indicator_lookup(indicator: str)`
-
-Fetches compact AlienVault OTX context for one IP address, domain, URL, or file hash.
-
-Returned data may include:
-
-- indicator type
-- pulse count
-- compact pulse details
-- reputation and validation fields when available
-- available OTX sections
-- provider link
-- a light verdict
-
-### `google_safebrowsing_check_url(url: str)`
-
-Checks one URL against Google Safe Browsing threat lists.
-
-Returned data may include:
-
-- whether the URL matched
-- threat list matches
-- threat type and platform type
-- cache duration
-- threat metadata when available
-- a light verdict
+Returned data includes, per provider, its API-key presence booleans and which indicator types `enrich` will call it for; the keyless sources; the configured and missing key lists; and `secret_values_returned: false`. The indicator types are derived from the dispatch table rather than restated, so they cannot report coverage `enrich` no longer has.
 
 ### `enrich(indicator: str)`
 
@@ -338,69 +125,30 @@ Source order is fixed and independent of which source responds first.
 
 `ok: false` means only that the caller must change something: unclassifiable input, or a reference that belongs to another tool. Every source failing is still `ok: true` with the failures attributed, because retrying will not fix an absence of data. Passing a CVE or ATT&CK technique id returns `ok: false` naming the tool that does handle it.
 
-### `attack_technique_lookup(technique_id: str)`
+### `lookup(reference: str)`
 
-Looks up one MITRE ATT&CK Enterprise technique from the local STIX snapshot.
+Collects every local source covering one reference, in a single call. Accepts:
 
-The input must be a technique ID such as `T1059` or `T1059.001`.
+- a CVE id such as `CVE-2024-3400`, which asks NVD (live) and the local KEV catalog
+- an ATT&CK technique id such as `T1059` or `T1059.001`, which asks ATT&CK and searches LOLBAS
+- an ATT&CK tactic id such as `TA0002`
+- a bare name such as `Certutil.exe` or `execution`, which asks both LOLBAS and ATT&CK tactics
 
-Returned data includes fields such as:
+A bare name is ambiguous: it could be a LOLBAS binary or a tactic. Rather than guess, `lookup` asks both. They are local and fast, and the `sources` map shows which one answered.
 
-- technique ID and name
-- tactics
-- platforms
-- data sources
-- detection guidance
-- mitigations
-- references
-- parent and subtechnique relationships
-- revoked and deprecated flags
+Returned data includes `reference`, `reference_type`, `source_summary`, and the same `sources` map `enrich` returns.
 
-### `attack_search(query: str, limit: int = 10)`
+Passing an IP, URL or file hash returns `ok: false` naming `enrich` instead.
 
-Searches local MITRE ATT&CK Enterprise techniques without using the network.
+### `search(query: str, source: str = "all", limit: int = 10)`
 
-Returned data includes compact ranked matches with technique ID, name, tactics, platforms, and matched context.
+Searches ATT&CK, KEV and LOLBAS by keyword, grouped by source.
 
-### `attack_tactic_lookup(tactic: str)`
+Results are never merged into one ranked list. The three catalogs share almost no fields and their scoring functions produce numbers on unrelated scales, so a combined ranking would invent a precision that does not exist.
 
-Looks up one MITRE ATT&CK Enterprise tactic from the local STIX snapshot.
+`limit` applies **per source**, so `source="all"` does not quietly return three times the rows you asked for. Each source reports `match_count` (how many matched in total) alongside `returned` (how many came back), so you can tell 10-of-11 from 10-of-400.
 
-The input can be a short name such as `initial-access` or a display name such as `Initial Access`.
-
-Returned data includes tactic metadata and associated techniques.
-
-### `cve_lookup(cve_id: str)`
-
-Looks up one CVE using the NVD CVE API.
-
-Unlike the local snapshot tools, this is a live network lookup because a full CVE mirror would be large. It uses `NVD_API_KEY` when configured, but the key is optional.
-
-Returned data includes NVD description, publication dates, status, best available CVSS metric, weaknesses, references, affected CPEs, and CISA fields when NVD provides them.
-
-### `kev_lookup(cve_id: str)`
-
-Looks up one CVE in the local CISA Known Exploited Vulnerabilities catalog.
-
-Returned data includes whether the CVE is in KEV, vendor/project, product, vulnerability name, date added, due date, required action, ransomware campaign flag, CWE values, and source metadata.
-
-### `kev_search(query: str, limit: int = 10)`
-
-Searches the local CISA KEV catalog without using the network.
-
-Returned data includes compact ranked matches with CVE ID, affected vendor/product, vulnerability name, required action, and matched context.
-
-### `lolbas_lookup(name: str)`
-
-Looks up one LOLBAS entry from the local catalog.
-
-Returned data includes defensive context such as categories, ATT&CK technique IDs, paths, detection references, resources, privileges, operating systems, and use cases. Raw command examples are intentionally omitted.
-
-### `lolbas_search(query: str, limit: int = 10)`
-
-Searches the local LOLBAS catalog without using the network.
-
-Returned data includes compact ranked matches with entry name, categories, ATT&CK technique IDs, source URL, and matched context.
+Set `source` to `attack`, `kev` or `lolbas` to search just one.
 
 ### `knowledge_status()`
 
@@ -609,7 +357,7 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
 - `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 
-Prefer `enrich` for a whole picture of one indicator; reach for a provider-specific tool only when you want to isolate a single vendor's view. Prefer `lookup` for one reference and `search` to find candidates; the per-source tools stay available when you want a single catalog. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
+`enrich` always calls every source that supports the indicator's type; there is no way to ask a single vendor, by design. Prefer `lookup` for one reference and `search` to find candidates; the per-source tools stay available when you want a single catalog. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
 
 ## Troubleshooting
 

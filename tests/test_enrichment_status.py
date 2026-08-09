@@ -1,6 +1,6 @@
 from threatsyft.enrichment.enrich import DISPATCH
 from threatsyft.enrichment.providers import PROVIDERS
-from threatsyft.enrichment.status import enrichment_status
+from threatsyft.enrichment.status import KEYLESS_SOURCES, enrichment_status
 
 
 def test_enrichment_status_reports_key_presence_without_secret_values(monkeypatch) -> None:
@@ -31,7 +31,7 @@ def test_enrichment_status_key_lists_cover_every_provider(monkeypatch) -> None:
     monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
     data = enrichment_status()["data"]
-    every_key = {name for metadata in PROVIDERS.values() for name in metadata["api_keys"]}
+    every_key = {name for keys in PROVIDERS.values() for name in keys}
 
     assert set(data["configured_api_keys"]) | set(data["missing_api_keys"]) == every_key
     assert not set(data["configured_api_keys"]) & set(data["missing_api_keys"])
@@ -46,7 +46,19 @@ def test_every_keyed_enrich_source_has_provider_metadata() -> None:
     provider. If the two used different names for the same provider, a caller
     could not tell a missing key from a broken provider.
     """
-    keyless = {"dns", "rdap", "whois"}
+    keyless = set(KEYLESS_SOURCES)
     named = {name for sources in DISPATCH.values() for name, _ in sources}
 
     assert named - keyless <= set(PROVIDERS)
+    assert named >= set(PROVIDERS), "every keyed provider must be reachable through enrich"
+
+
+def test_enrichment_status_reports_indicator_types_from_the_dispatch_table() -> None:
+    """Derived, not restated, so it cannot report coverage enrich no longer has."""
+    providers = enrichment_status()["data"]["providers"]
+
+    assert providers["shodan"]["indicator_types"] == ["ip"]
+    assert providers["securitytrails"]["indicator_types"] == ["domain"]
+    assert set(providers["virustotal"]["indicator_types"]) == {"ip", "domain", "url", "hash"}
+    for provider, entry in providers.items():
+        assert entry["indicator_types"], f"{provider} is configured but never called"
