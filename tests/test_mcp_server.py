@@ -26,4 +26,5 @@ def test_mcp_server_registers_expected_tools() -> None:
         "domain_reputation",
         "url_reputation",
         "file_reputation",
+        "enrich",
     ]

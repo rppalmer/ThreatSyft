@@ -12,6 +12,7 @@ from threatsyft.enrichment.alienvault import (
 )
 from threatsyft.enrichment.dns import dns_lookup as run_dns_lookup
 from threatsyft.enrichment.domain_reputation import domain_reputation as run_domain_reputation
+from threatsyft.enrichment.enrich import enrich as run_enrich
 from threatsyft.enrichment.file_reputation import file_reputation as run_file_reputation
 from threatsyft.enrichment.greynoise import greynoise_ip_context as run_greynoise_ip_context
 from threatsyft.enrichment.ip_reputation import ip_reputation as run_ip_reputation
@@ -167,6 +168,12 @@ def url_reputation(url: str) -> dict[str, Any]:
 def file_reputation(file_hash: str) -> dict[str, Any]:
     """Build an aggregate file hash reputation fact pack from multiple provider results."""
     return run_file_reputation(file_hash)
+
+
+@mcp.tool()
+def enrich(indicator: str) -> dict[str, Any]:
+    """Collect context on one IP, domain, URL, or file hash from every source that has it."""
+    return run_enrich(indicator)
 
 
 def main() -> None:

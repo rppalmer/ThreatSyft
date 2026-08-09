@@ -32,9 +32,12 @@ __all__ = [
     "is_file_hash",
     "file_hash_type",
     "classify_target",
+    "classify_indicator",
+    "IndicatorType",
 ]
 
 TargetType = Literal["domain", "ip"]
+IndicatorType = Literal["ip", "domain", "url", "hash"]
 
 DOMAIN_PATTERN = re.compile(r"^(?=.{1,253}\.?$)(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}\.?$")
 FILE_HASH_PATTERN = re.compile(r"^(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{64})$")
@@ -103,6 +106,38 @@ def file_hash_type(value: str) -> str:
     if len(value) == 40:
         return "sha1"
     return "sha256"
+
+
+def classify_indicator(value: str) -> tuple[IndicatorType, str]:
+    """Return the type of an enrichable indicator, with its normalized value.
+
+    Order matters. An IP is tried first because it is the only unambiguous form,
+    then a URL because it is the only one carrying a scheme, then a hash because
+    its pattern is exact, and a domain last because it is the loosest.
+    """
+    indicator = value.strip()
+    if not indicator:
+        raise InputValidationError("Indicator must not be empty.")
+
+    try:
+        return "ip", str(ipaddress.ip_address(indicator))
+    except ValueError:
+        pass
+
+    try:
+        return "url", normalize_url(indicator)
+    except InputValidationError:
+        pass
+
+    if is_file_hash(indicator):
+        return "hash", normalize_file_hash(indicator)
+
+    try:
+        return "domain", normalize_domain(indicator)
+    except InputValidationError as exc:
+        raise InputValidationError(
+            "Indicator must be an IP address, domain, URL, or MD5/SHA1/SHA256 hash."
+        ) from exc
 
 
 def classify_target(value: str) -> tuple[TargetType, str]:

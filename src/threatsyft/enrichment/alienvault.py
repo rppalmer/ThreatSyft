@@ -17,11 +17,8 @@ from threatsyft.enrichment.http import (
 )
 from threatsyft.enrichment.models import (
     InputValidationError,
+    classify_indicator,
     error_response,
-    is_file_hash,
-    normalize_domain,
-    normalize_file_hash,
-    normalize_url,
     success_response,
 )
 
@@ -104,31 +101,20 @@ def alienvault_indicator_lookup(indicator: str) -> dict[str, Any]:
 
 
 def _classify_indicator(value: str) -> tuple[str, str]:
-    indicator = value.strip()
-    if not indicator:
-        raise InputValidationError("Indicator must not be empty.")
+    """Classify an indicator into the type names OTX uses in its URL path.
 
-    try:
-        ip = ipaddress.ip_address(indicator)
-    except ValueError:
-        pass
-    else:
-        return ("IPv4" if ip.version == 4 else "IPv6"), str(ip)
-
-    try:
-        return "url", normalize_url(indicator)
-    except InputValidationError:
-        pass
-
-    if is_file_hash(indicator):
-        return "file", normalize_file_hash(indicator)
-
-    try:
-        return "domain", normalize_domain(indicator)
-    except InputValidationError as exc:
-        raise InputValidationError(
-            "Indicator must be an IP address, domain, URL, or MD5/SHA1/SHA256 hash."
-        ) from exc
+    The classification itself is shared (``classify_indicator``); only the
+    vocabulary is OTX-specific. OTX splits IPs by address family and calls a
+    file hash ``file``, neither of which belongs in the neutral type names the
+    rest of the codebase uses.
+    """
+    indicator_type, normalized = classify_indicator(value)
+    if indicator_type == "ip":
+        version = ipaddress.ip_address(normalized).version
+        return ("IPv4" if version == 4 else "IPv6"), normalized
+    if indicator_type == "hash":
+        return "file", normalized
+    return indicator_type, normalized
 
 
 def _compact_pulses(value: object) -> list[dict[str, Any]]:
