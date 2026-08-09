@@ -39,8 +39,8 @@ def test_mcp_example_configs_are_valid_json() -> None:
 def test_setup_command_names_a_console_script_that_exists() -> None:
     """The command told to a user with a missing snapshot must be one they can run.
 
-    It named the retired `threatsyft knowledge-update` after the CLI was
-    replaced, and five tests asserted the stale string rather than catching it.
+    Asserted against pyproject rather than against a literal string, so renaming
+    a console script fails here instead of silently misdirecting a user.
     """
     data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     scripts = set(data["project"]["scripts"])

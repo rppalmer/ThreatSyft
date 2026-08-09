@@ -1,6 +1,6 @@
 """Shared HTTP request/error mapping for enrichment providers.
 
-Every provider used to hand-write the same ~30-line ``try/except`` ladder mapping
+Providers share one ``try/except`` ladder mapping
 httpx failures and common status codes onto the shared error envelope, which let
 the copies drift. These helpers centralize that mapping while leaving the actual
 ``httpx.get`` call inside each provider module (passed in as ``call``) so provider

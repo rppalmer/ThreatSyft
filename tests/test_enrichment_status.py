@@ -19,7 +19,7 @@ def test_enrichment_status_reports_key_presence_without_secret_values(monkeypatc
 
 
 def test_enrichment_status_no_longer_reports_fact_packs(monkeypatch) -> None:
-    """The aggregate tools are gone, so the block describing their key requirements is too."""
+    """Status reports provider keys, not per-tool key requirements."""
     result = enrichment_status()
 
     assert "fact_packs" not in result["data"]
@@ -54,7 +54,7 @@ def test_every_keyed_enrich_source_has_provider_metadata() -> None:
 
 
 def test_enrichment_status_reports_indicator_types_from_the_dispatch_table() -> None:
-    """Derived, not restated, so it cannot report coverage enrich no longer has."""
+    """Derived from the dispatch table, so it cannot disagree with what enrich calls."""
     providers = enrichment_status()["data"]["providers"]
 
     assert providers["shodan"]["indicator_types"] == ["ip"]

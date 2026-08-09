@@ -76,10 +76,9 @@ def build_sources(
             "code": error.get("code", "unexpected_error"),
             "message": error.get("message", "Source lookup failed."),
         }
-        # Carry details through when a source provides them. This is where
-        # `setup_command` lives on a missing snapshot, which is the one piece of
-        # the response that tells a caller how to fix the problem; dropping it
-        # left "snapshot not found" with no way to act on it.
+        # Carry details through when a source provides them. `setup_command`
+        # lives here on a missing snapshot, and it is the only part of the
+        # response that tells a caller how to fix the problem.
         details = error.get("details")
         if details:
             entry["details"] = details

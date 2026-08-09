@@ -2,12 +2,11 @@
 
 Some provider APIs take the key as a URL query parameter rather than a header:
 Shodan uses ``?key=``, IPGeolocation uses ``?apiKey=``, Google Safe Browsing
-uses ``?key=``. httpx logs the full request URL at INFO level, so simply making
-a request wrote those keys to stderr, which an MCP host captures into its logs.
+uses ``?key=``. httpx logs the full request URL at INFO level, so making a
+request writes those keys to stderr, which an MCP host captures into its logs.
 
-Found by driving the servers over real stdio and reading the output. The review
-had assumed keys were safe because httpx's *error* messages omit the URL; the
-leak was in its ordinary request logging instead.
+Note that httpx's *error* messages omit the URL, so error handling alone is not
+evidence that keys are safe; ordinary request logging is the exposure.
 
 Two layers, because the first depends on a log level nobody controls:
 

@@ -30,22 +30,20 @@ DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL = "https://safebrowsing.googleapis.com"
 def _load_environment() -> None:
     """Load ``.env`` from the working directory and from a fixed home location.
 
-    The previous ``load_dotenv()`` call found nothing when an MCP host launched
-    the server, so every keyed tool reported a missing API key. A bare call
-    resolves its search root by inspecting the *calling frame*, meaning it walks
-    up from wherever this module happens to live: the repository for an editable
-    install, site-packages otherwise. It looked like it worked because local
-    development is the editable case. None of the documented host configurations
-    set ``cwd``, and none of them install editable.
+    Both locations are explicit on purpose. A bare ``load_dotenv()`` resolves
+    its search root from the *calling frame*, so it walks up from wherever this
+    module lives: the repository under an editable install, site-packages
+    otherwise. That works during local development and silently finds nothing
+    when an MCP host launches the server, because hosts set neither ``cwd`` nor
+    an editable install, and every keyed tool then reports a missing API key.
 
-    Two explicit locations replace that guesswork. ``find_dotenv(usecwd=True)``
-    really does search the working directory, so a project-local file keeps
-    working during development, and ``~/.threatsyft/.env`` is a fixed path that
-    resolves the same no matter where the host starts the process.
+    ``find_dotenv(usecwd=True)`` really does search the working directory, so a
+    project-local file works during development, and ``~/.threatsyft/.env`` is a
+    fixed path that resolves the same wherever the host starts the process.
 
-    ``load_dotenv`` never overwrites a variable that is already set, so
-    precedence runs: real process environment, then a ``.env`` at or above the
-    working directory, then ``~/.threatsyft/.env``.
+    ``load_dotenv`` never overwrites an already-set variable, so precedence runs:
+    process environment, then a ``.env`` at or above the working directory, then
+    ``~/.threatsyft/.env``.
     """
     working_directory_env = find_dotenv(usecwd=True)
     if working_directory_env:
@@ -60,10 +58,9 @@ def _setting(name: str, default: str) -> str:
     """Return an environment override, treating blank as unset.
 
     ``os.getenv(name, default)`` returns "" for a variable that is set but
-    empty, so the default never applies. That is exactly what ``.env.example``
-    produces: it lists every optional setting with an empty value, so copying it
-    to ``.env`` silently blanked every URL in the project. Found end to end,
-    when a snapshot download failed with an empty source URL.
+    empty, so the default never applies and the setting is silently blanked. A
+    ``.env`` listing optional settings with empty values is an easy way to hit
+    that, so blank is treated as absent here.
     """
     value = os.getenv(name)
     if value is None:
@@ -188,10 +185,9 @@ def get_google_safebrowsing_base_url() -> str:
 def knowledge_update_command(source: str) -> str:
     """Return the console command for refreshing one knowledge snapshot.
 
-    This string is what a caller is told to run when a snapshot is missing, so
-    it has to name a command that exists. It named the retired
-    ``threatsyft knowledge-update`` until an end-to-end run on a fresh install
-    surfaced it.
+    This string is handed to a caller whose snapshot is missing, so it has to
+    name a console script that exists. ``test_packaging`` asserts that pairing
+    against ``pyproject``.
     """
     return f"threatsyft-update {source}"
 

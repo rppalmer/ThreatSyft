@@ -125,9 +125,9 @@ def _ip_whois_lookup(ip: str, query: dict[str, Any]) -> dict[str, Any]:
 def _capped(value: str | None) -> str | None:
     """Cap raw WHOIS text.
 
-    Every field worth having is already parsed out above; the raw text is a
-    fallback for the occasional registrar-specific line, not the payload. Full
-    records ran to tens of kilobytes of mostly boilerplate.
+    Every field worth having is parsed out above; the raw text is a fallback for
+    the occasional registrar-specific line, not the payload. Full records run to
+    tens of kilobytes of mostly boilerplate.
     """
     if value is None or len(value) <= MAX_RAW_CHARS:
         return value

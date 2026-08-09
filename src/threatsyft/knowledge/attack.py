@@ -150,9 +150,8 @@ def attack_tactic_lookup(tactic: str) -> dict[str, Any]:
         )
 
     query["tactic"] = tactic_item.short_name
-    # Identity only. A tactic holds dozens of techniques, and a full summary
-    # each made this the largest response in the project; call lookup on any of
-    # them for the detail.
+    # Identity only. A tactic holds dozens of techniques, so a full summary
+    # each makes this the largest response in the project.
     techniques = [
         _technique_ref(technique)
         for technique in sorted(
@@ -455,15 +454,14 @@ def _technique_detail(technique: Technique, knowledge: AttackKnowledge) -> dict[
         "description": technique.description,
         "data_sources": technique.data_sources,
         "detection": technique.detection,
-        # Trimmed to identity. The full prose for any one of these is a
-        # lookup("M####") away, so nothing is lost and the common case stays
-        # small. Nine full mitigation write-ups were 55% of this response.
+        # Identity only; full prose is a lookup("M####") away. Inlining every
+        # write-up here accounted for over half the response.
         "mitigations": [_mitigation_ref(mitigation) for mitigation in technique.mitigations],
         "references": technique.references,
         "parent": parent,
-        # Also trimmed to identity: each full summary re-embedded every tactic
-        # object, so tactic descriptions repeated once per subtechnique. Call
-        # lookup on a subtechnique id for its detail.
+        # Identity only; call lookup on a subtechnique id for its detail. Full
+        # summaries here re-embed every tactic object, repeating tactic prose
+        # once per row.
         "subtechniques": [
             _technique_ref(knowledge.techniques_by_id[subtechnique_id])
             for subtechnique_id in technique.subtechnique_ids
