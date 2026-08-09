@@ -1,8 +1,16 @@
 from pathlib import Path
 
+import pytest
+
 from threatsyft.knowledge import attack
 
 FIXTURE_PATH = Path("tests/fixtures/attack-enterprise-mini.json")
+
+
+@pytest.fixture
+def attack_snapshot(monkeypatch):
+    """Point the loader at the fixture snapshot."""
+    monkeypatch.setenv("THREATSYFT_ATTACK_STIX_PATH", str(FIXTURE_PATH))
 
 
 def test_load_attack_knowledge_valid_fixture() -> None:
@@ -138,3 +146,53 @@ def test_attack_tactic_lookup_not_found(monkeypatch) -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "not_found"
+
+
+def test_technique_mitigations_are_trimmed_to_identity(attack_snapshot) -> None:
+    """55% of this response was nine full mitigation write-ups; the prose moved to lookup."""
+    data = attack.attack_technique_lookup("T1059")["data"]
+
+    for mitigation in data["mitigations"]:
+        assert set(mitigation) == {"mitigation_id", "name", "source_url"}
+
+
+def test_technique_subtechniques_are_trimmed_to_identity(attack_snapshot) -> None:
+    """Each full summary re-embedded every tactic object, repeating tactic prose per row."""
+    data = attack.attack_technique_lookup("T1059")["data"]
+
+    for subtechnique in data["subtechniques"]:
+        assert set(subtechnique) == {"technique_id", "name"}
+
+
+def test_tactic_descriptions_do_not_repeat_inside_a_technique(attack_snapshot) -> None:
+    data = attack.attack_technique_lookup("T1059")["data"]
+
+    for tactic in data["tactics"]:
+        assert "description" not in tactic
+
+
+def test_tactic_lookup_keeps_the_description_of_the_tactic_asked_for(attack_snapshot) -> None:
+    """Trimming removes repetition, not the answer to the question actually asked."""
+    data = attack.attack_tactic_lookup("execution")["data"]
+
+    assert "description" in data["tactic"]
+
+
+def test_mitigation_lookup_returns_the_prose_trimmed_from_the_technique(attack_snapshot) -> None:
+    technique = attack.attack_technique_lookup("T1059")["data"]
+    mitigation_id = technique["mitigations"][0]["mitigation_id"]
+
+    result = attack.attack_mitigation_lookup(mitigation_id)
+
+    assert result["ok"] is True
+    assert result["data"]["mitigation_id"] == mitigation_id
+    assert result["data"]["description"]
+    assert result["data"]["technique_count"] >= 1
+
+
+def test_mitigation_lookup_rejects_a_malformed_id(attack_snapshot) -> None:
+    assert attack.attack_mitigation_lookup("nope")["error"]["code"] == "invalid_input"
+
+
+def test_mitigation_lookup_reports_an_unknown_id_as_not_found(attack_snapshot) -> None:
+    assert attack.attack_mitigation_lookup("M9999")["error"]["code"] == "not_found"

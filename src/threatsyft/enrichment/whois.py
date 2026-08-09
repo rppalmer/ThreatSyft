@@ -21,6 +21,7 @@ from threatsyft.enrichment.models import (
 )
 
 TOOL_NAME = "whois_lookup"
+MAX_RAW_CHARS = 2000
 
 
 def whois_lookup(target: str) -> dict[str, Any]:
@@ -62,7 +63,7 @@ def _domain_whois_lookup(domain: str, query: dict[str, Any]) -> dict[str, Any]:
         "name_servers": _clean_string_list(record.get("name_servers")),
         "status": _clean_string_list(record.get("status")),
         "emails": _clean_string_list(record.get("emails")),
-        "raw": _clean_value(record.get("text")),
+        "raw": _capped(_clean_value(record.get("text"))),
     }
     return success_response(TOOL_NAME, query, data)
 
@@ -117,9 +118,20 @@ def _ip_whois_lookup(ip: str, query: dict[str, Any]) -> dict[str, Any]:
             "start_address": _clean_value(network.get("start_address")),
             "end_address": _clean_value(network.get("end_address")),
         },
-        "raw": record,
     }
     return success_response(TOOL_NAME, query, data)
+
+
+def _capped(value: str | None) -> str | None:
+    """Cap raw WHOIS text.
+
+    Every field worth having is already parsed out above; the raw text is a
+    fallback for the occasional registrar-specific line, not the payload. Full
+    records ran to tens of kilobytes of mostly boilerplate.
+    """
+    if value is None or len(value) <= MAX_RAW_CHARS:
+        return value
+    return value[:MAX_RAW_CHARS] + "... [truncated]"
 
 
 def _build_certifi_opener() -> urllib.request.OpenerDirector:

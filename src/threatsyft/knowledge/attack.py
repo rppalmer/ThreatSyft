@@ -17,6 +17,7 @@ from threatsyft.core import (
 from threatsyft.knowledge.snapshot_cache import load_cached
 
 TECHNIQUE_ID_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
+MITIGATION_ID_PATTERN = re.compile(r"^M\d{4}$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class AttackKnowledge:
     techniques_by_stix_id: dict[str, Technique]
     tactics_by_short_name: dict[str, Tactic]
     tactics_by_alias: dict[str, Tactic]
+    mitigations_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def attack_technique_lookup(technique_id: str) -> dict[str, Any]:
@@ -167,6 +169,63 @@ def attack_tactic_lookup(tactic: str) -> dict[str, Any]:
             "snapshot_path": str(knowledge.path),
         },
     )
+
+
+def attack_mitigation_lookup(mitigation_id: str) -> dict[str, Any]:
+    """Look up one ATT&CK mitigation by ID, with its full description.
+
+    This is what makes trimming the mitigation list on a technique safe: the
+    prose is one call away instead of being inlined nine times over.
+    """
+    query = {"mitigation_id": mitigation_id}
+
+    try:
+        normalized_id = normalize_mitigation_id(mitigation_id)
+        knowledge = load_attack_knowledge()
+    except InputValidationError as exc:
+        return error_response("attack_mitigation_lookup", query, "invalid_input", str(exc))
+    except KnowledgeLoadError as exc:
+        return exc.to_response("attack_mitigation_lookup", query)
+
+    query["mitigation_id"] = normalized_id
+    mitigation = knowledge.mitigations_by_id.get(normalized_id)
+    if mitigation is None:
+        return error_response(
+            "attack_mitigation_lookup",
+            query,
+            "not_found",
+            f"ATT&CK mitigation {normalized_id} was not found in the local snapshot.",
+            {"snapshot_path": str(knowledge.path)},
+        )
+
+    techniques = [
+        _technique_ref(technique)
+        for technique in sorted(
+            knowledge.techniques_by_id.values(), key=lambda item: item.technique_id
+        )
+        if any(entry.get("mitigation_id") == normalized_id for entry in technique.mitigations)
+    ]
+
+    return success_response(
+        "attack_mitigation_lookup",
+        query,
+        {
+            **mitigation,
+            "technique_count": len(techniques),
+            "techniques": techniques,
+            "snapshot_path": str(knowledge.path),
+        },
+    )
+
+
+def normalize_mitigation_id(value: str) -> str:
+    """Normalize an ATT&CK mitigation ID such as ``M1038``."""
+    mitigation_id = value.strip().upper()
+    if not mitigation_id:
+        raise InputValidationError("Mitigation ID must not be empty.")
+    if not MITIGATION_ID_PATTERN.fullmatch(mitigation_id):
+        raise InputValidationError("Mitigation ID must look like M1038.")
+    return mitigation_id
 
 
 class KnowledgeLoadError(Exception):
@@ -284,6 +343,10 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
         techniques_by_stix_id=techniques_by_stix_id,
         tactics_by_short_name=tactics_by_short_name,
         tactics_by_alias=tactics_by_alias,
+        mitigations_by_id={
+            mitigation["mitigation_id"]: mitigation
+            for mitigation in mitigations_by_stix_id.values()
+        },
     )
 
 
@@ -381,7 +444,7 @@ def _technique_detail(technique: Technique, knowledge: AttackKnowledge) -> dict[
     if technique.parent_id is not None:
         parent_technique = knowledge.techniques_by_id.get(technique.parent_id)
         if parent_technique is not None:
-            parent = _technique_summary(parent_technique, knowledge)
+            parent = _technique_ref(parent_technique)
 
     return {
         **_technique_summary(technique, knowledge),
@@ -389,11 +452,17 @@ def _technique_detail(technique: Technique, knowledge: AttackKnowledge) -> dict[
         "description": technique.description,
         "data_sources": technique.data_sources,
         "detection": technique.detection,
-        "mitigations": technique.mitigations,
+        # Trimmed to identity. The full prose for any one of these is a
+        # lookup("M####") away, so nothing is lost and the common case stays
+        # small. Nine full mitigation write-ups were 55% of this response.
+        "mitigations": [_mitigation_ref(mitigation) for mitigation in technique.mitigations],
         "references": technique.references,
         "parent": parent,
+        # Also trimmed to identity: each full summary re-embedded every tactic
+        # object, so tactic descriptions repeated once per subtechnique. Call
+        # lookup on a subtechnique id for its detail.
         "subtechniques": [
-            _technique_summary(knowledge.techniques_by_id[subtechnique_id], knowledge)
+            _technique_ref(knowledge.techniques_by_id[subtechnique_id])
             for subtechnique_id in technique.subtechnique_ids
             if subtechnique_id in knowledge.techniques_by_id
         ],
@@ -405,7 +474,9 @@ def _technique_summary(technique: Technique, knowledge: AttackKnowledge) -> dict
     return {
         "technique_id": technique.technique_id,
         "name": technique.name,
-        "tactics": [_tactic_data(tactic) for tactic in _technique_tactics(technique, knowledge)],
+        # Tactic references, not full tactic objects. The description belongs on
+        # the tactic you asked about, not repeated everywhere a tactic appears.
+        "tactics": [_tactic_ref(tactic) for tactic in _technique_tactics(technique, knowledge)],
         "platforms": technique.platforms,
         "revoked": technique.revoked,
         "deprecated": technique.deprecated,
@@ -415,12 +486,31 @@ def _technique_summary(technique: Technique, knowledge: AttackKnowledge) -> dict
 
 
 def _tactic_data(tactic: Tactic) -> dict[str, Any]:
+    """Full tactic, description included. Only for the tactic being asked about."""
+    return {**_tactic_ref(tactic), "description": tactic.description}
+
+
+def _tactic_ref(tactic: Tactic) -> dict[str, Any]:
+    """Enough to identify a tactic and look it up, without its prose."""
     return {
         "tactic_id": tactic.tactic_id,
         "name": tactic.name,
         "short_name": tactic.short_name,
-        "description": tactic.description,
         "source_url": tactic.source_url,
+    }
+
+
+def _technique_ref(technique: Technique) -> dict[str, Any]:
+    """Enough to identify a technique and look it up, without its detail."""
+    return {"technique_id": technique.technique_id, "name": technique.name}
+
+
+def _mitigation_ref(mitigation: dict[str, Any]) -> dict[str, Any]:
+    """Enough to identify a mitigation and look it up, without its prose."""
+    return {
+        "mitigation_id": mitigation.get("mitigation_id"),
+        "name": mitigation.get("name"),
+        "source_url": mitigation.get("source_url"),
     }
 
 

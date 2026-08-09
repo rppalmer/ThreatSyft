@@ -82,10 +82,12 @@ def test_search_sources_are_all_callable() -> None:
 def test_lookup_and_search_share_the_enrich_sources_shape() -> None:
     for data in [lookup("T1059")["data"], search("cert")["data"]]:
         assert set(data["source_summary"]) == {"ok", "failed"}
-        for entry in data["sources"].values():
+        for name, entry in data["sources"].items():
             assert isinstance(entry["ok"], bool)
             if not entry["ok"]:
                 assert set(entry) >= {"ok", "code", "message"}
+            # Snapshot-backed sources also carry their age; live ones do not.
+            assert "freshness" in entry or name == "nvd"
 
 
 def test_lookup_summary_counts_match_the_sources_map() -> None:
@@ -220,11 +222,10 @@ def test_search_attributes_a_failing_source_without_failing_the_call(monkeypatch
     result = search("cert")
 
     assert result["ok"] is True
-    assert result["data"]["sources"]["kev"] == {
-        "ok": False,
-        "code": "not_found",
-        "message": "Snapshot missing.",
-    }
+    entry = result["data"]["sources"]["kev"]
+    assert entry["ok"] is False
+    assert entry["code"] == "not_found"
+    assert entry["message"] == "Snapshot missing."
     assert result["data"]["source_summary"]["failed"] >= 1
 
 
