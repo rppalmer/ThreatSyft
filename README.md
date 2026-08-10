@@ -44,7 +44,7 @@ Each tool has one explicit job and returns a structured JSON response with a sta
 ```json
 {
   "ok": true,
-  "tool": "dns_lookup",
+  "tool": "enrich",
   "query": {},
   "data": {},
   "error": null
@@ -56,12 +56,12 @@ Errors use the same shape, which makes results easier for humans and AI clients 
 ```json
 {
   "ok": false,
-  "tool": "dns_lookup",
+  "tool": "enrich",
   "query": {},
   "data": null,
   "error": {
     "code": "invalid_input",
-    "message": "Domain must not be empty.",
+    "message": "Indicator must be an IP address, domain, URL, or MD5/SHA1/SHA256 hash.",
     "details": null
   }
 }
@@ -113,7 +113,7 @@ Returned data includes, per provider, its API-key presence booleans and which in
 
 Classifies one indicator and collects context from every source that supports its type, in a single call. Accepts an IP, domain, URL, or MD5/SHA1/SHA256 hash.
 
-This is collection, not judgement. It returns **no** overall verdict and no confidence score: a verdict computed here would silently change meaning when one provider rate-limits, and the caller cannot see that happen. Interpretation is the calling agent's job.
+This is collection, not judgement. It returns **no** verdict and no confidence score, per source or overall: a verdict computed here would silently change meaning when one provider rate-limits, and the caller cannot see that happen. Each provider's own fields come back under that provider's own names — `last_analysis_stats`, `abuse_confidence_score`, `classification`, `matched` — and nothing reduces them. Interpretation is the calling agent's job.
 
 Returned data includes:
 
@@ -150,19 +150,21 @@ Results are never merged into one ranked list. The three catalogs share almost n
 
 `limit` applies **per source**, so `source="all"` does not quietly return three times the rows you asked for. Each source reports `match_count` (how many matched in total) alongside `returned` (how many came back), so you can tell 10-of-11 from 10-of-400.
 
-Set `source` to `attack`, `actors`, `kev` or `lolbas` to search just one.
+Set `source` to `attack_technique`, `attack_actor`, `kev` or `lolbas` to search just one. These are the same source names `lookup` uses in its `sources` map, so one vocabulary covers both tools.
 
 ### `knowledge_status()`
 
 Checks local knowledge snapshot availability without calling external providers.
 
-Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for `cve_lookup`. It does not print secret values.
+Returned data includes snapshot paths, availability, counts, file modified timestamps, source update timestamps when available, setup commands, unavailable snapshot names, and live-tool configuration status for the NVD CVE lookup. It does not print secret values.
 
 ### `extract_iocs(text: str)`
 
 Extracts typed IOC candidates from text you already have. No network access; it does not fetch URLs.
 
-Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values only), `ioc_counts`, and `untrusted_context`. It handles common defanged forms such as `hxxp://example[.]com`.
+Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values only), `ioc_counts`, `returned_counts`, `truncated`, `max_items_per_type`, and `untrusted_context`. It handles common defanged forms such as `hxxp://example[.]com`.
+
+`ioc_counts` is how many distinct indicators of each type the text contains, counted before the per-type cap; `returned_counts` is how many came back. They differ exactly for the types listed in `truncated`, so a long report that overflows the cap says so rather than losing indicators silently.
 
 `iocs` carries values only so a caller can iterate it and feed the values straight to an enrichment tool. The surrounding source text stays under `untrusted_context`, keyed by IOC value, and is never merged into a server-authored field — a caller can drop that key entirely without losing any indicator.
 
@@ -210,7 +212,7 @@ The current version supports these environment variables:
 - `THREATSYFT_ATTACK_STIX_URL`: source URL used by the explicit ATT&CK update command.
 - `THREATSYFT_CISA_KEV_PATH`: local CISA KEV cache path. Defaults to `~/.threatsyft/knowledge/cisa/known_exploited_vulnerabilities.json`.
 - `THREATSYFT_CISA_KEV_URL`: source URL used by the explicit CISA KEV update command.
-- `THREATSYFT_NVD_BASE_URL`: base URL for `cve_lookup`. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
+- `THREATSYFT_NVD_BASE_URL`: base URL for the NVD CVE API, which `lookup` calls for a CVE reference. Defaults to `https://services.nvd.nist.gov/rest/json/cves/2.0`.
 - `THREATSYFT_LOLBAS_PATH`: local LOLBAS cache path. Defaults to `~/.threatsyft/knowledge/lolbas/lolbas.json`.
 - `THREATSYFT_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
 - `ABUSEIPDB_API_KEY`: API key for `abuseipdb_check_ip`.
@@ -221,7 +223,7 @@ The current version supports these environment variables:
 - `IPGEOLOCATION_API_KEY`: API key for `ipgeolocation_lookup`.
 - `ALIENVAULT_API_KEY`: API key for `alienvault_indicator_lookup`.
 - `GOOGLE_SAFEBROWSING_API_KEY`: API key for `google_safebrowsing_check_url`.
-- `NVD_API_KEY`: optional API key for `cve_lookup`.
+- `NVD_API_KEY`: optional API key for the NVD CVE API.
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.
 
@@ -367,21 +369,21 @@ Once your MCP host has discovered the servers, drive them from the agent with pr
 - `Use ThreatSyft enrich on 8.8.8.8. Tell me which sources returned data and which failed.`
 - `Use ThreatSyft enrich on example.com and summarize what each source said.`
 - `Use ThreatSyft enrich on https://example.com/ and explain any disagreement between sources.`
-- `Use ThreatSyft virustotal_file_report on d41d8cd98f00b204e9800998ecf8427e.`
+- `Use ThreatSyft enrich on d41d8cd98f00b204e9800998ecf8427e.`
 - `Use ThreatSyft lookup on T1059 and summarize what each source returned.`
 - `Use ThreatSyft lookup on CVE-2024-3400 and tell me whether it is in KEV.`
 - `Use ThreatSyft search for MOVEit and show me the matches per source.`
 - `Use ThreatSyft lookup on APT29 and list the techniques it is recorded as using.`
-- `Use ThreatSyft lolbas_lookup on Certutil.exe and summarize defensive detection ideas.`
+- `Use ThreatSyft lookup on Certutil.exe and summarize defensive detection ideas.`
 - `Use ThreatSyft extract_iocs on this incident note and list the indicators it found.`
 
-`enrich` always calls every source that supports the indicator's type; there is no way to ask a single vendor, by design. Prefer `lookup` for one reference and `search` to find candidates; the per-source tools stay available when you want a single catalog. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
+`enrich` always calls every source that supports the indicator's type; there is no way to ask a single vendor, by design. Prefer `lookup` for one reference and `search` to find candidates across catalogs; `search(query, source=...)` narrows to one catalog when you want just that. Use `extract_iocs` to pull indicators out of text you already have, then enrich those values.
 
 ## Troubleshooting
 
 - `missing_api_key`: the expected variable is absent. Check `.env`, or call `enrichment_status` for a local-only key-presence check that does not print secrets. A missing key is reported per source and the call still succeeds, so other sources still return data.
 - `authentication_error`: the key exists but the provider rejected it.
-- `rate_limited`: wait, or use a different provider-specific tool. `cve_lookup` uses the live NVD API — set `NVD_API_KEY` in `.env` or retry later.
+- `rate_limited`: reported against the one source that rate-limited; every other source in the same call still returns, so the result is usable. Wait before retrying. A CVE `lookup` calls the live NVD API — set `NVD_API_KEY` in `.env` for a higher limit, or retry later.
 - Slow RDAP or WHOIS: keep `THREATSYFT_TIMEOUT_SECONDS` at `15`, or temporarily raise it in `.env`.
 - `not_found` with a missing snapshot path from an ATT&CK, KEV, or LOLBAS tool: run the matching `threatsyft-update <source>` (or `all`) once, then retry. Use `knowledge_status` for a local-only readiness check.
 - MCP tools not showing in VS Code: restart the MCP servers from the Command Palette and confirm `.vscode/mcp.json` points to `${workspaceFolder}/.venv/bin/python`. For LM Studio or Cursor, confirm the configured command path runs from a terminal.

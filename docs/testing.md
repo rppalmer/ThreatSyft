@@ -34,23 +34,38 @@ exploited", and on a year-old catalog that claim is wrong.
 - [ ] Check the host's server log for `HTTP Request:` lines. There should be
       none. Two provider APIs pass the key in the URL, so request logging is a
       credential leak.
-- [ ] Confirm tool annotations reach the host: knowledge read-only/idempotent/
-      closed-world, enrichment read-only/non-idempotent/open-world.
+- [ ] Confirm tool annotations reach the host. Every tool is read-only and
+      non-destructive. Open-world/non-idempotent is per tool rather than per
+      server: `enrich` and `lookup` are the two that call out, and
+      `enrichment_status`, `search`, `extract_iocs` and `knowledge_status` are
+      closed-world/idempotent. A host that auto-approves closed-world tools
+      must not thereby auto-approve a CVE lookup, which reaches NVD.
 
 ## 3. Response size
 
 Watch for responses that blow a context budget. Rough expectations on real data:
 
+Measured against the real snapshots, not estimated:
+
 | Call | Expected |
 |---|---|
-| `lookup("T1059")` | ~10 KB |
-| `lookup("TA0002")` | ~11 KB |
+| `lookup("T1059")` | ~6.6 KB |
+| `lookup("TA0002")` | ~6.2 KB |
+| `lookup("G0016")` | ~6.2 KB |
+| `lookup("Certutil.exe")` | ~4 KB |
 | `enrich("8.8.8.8")` | ~7 KB |
 | `enrich("example.com")` | ~8 KB |
-| `search("powershell")` | ~7 KB |
+| `search("powershell")` | ~9.8 KB |
+| `search("cert")` | ~12 KB |
 
-Anything above ~15 KB deserves a look at which source is responsible. Both
-oversized payloads found so far came from a list nobody had capped.
+Anything above ~15 KB deserves a look at which source is responsible. All three
+oversized payloads found so far came from a list nobody had capped or trimmed:
+OTX pulse tags, a tactic's technique list, and KEV search returning the whole
+record per row rather than identity.
+
+Re-measure rather than trusting this table. It was wrong by up to 50% once
+already, because the numbers were written from memory after the trimming work
+rather than taken from a run.
 
 ## 4. Agent prompts
 

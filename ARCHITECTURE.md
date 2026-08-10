@@ -66,6 +66,10 @@ All three collection tools return results the same way, so a caller written agai
 
 Every entry has the same shape whether it succeeded or not, so a consumer iterates one structure instead of correlating a results map against an errors list. `source_summary` lets a node answer "did anything work?" without iterating. The type is echoed back so an agent that guessed wrong can self-correct. Source ordering is fixed and independent of which source answers first.
 
+One vocabulary too, not just one shape. The ATT&CK technique catalog is `attack_technique` in a `lookup` response, in a `search` response and in `search`'s `source` argument; the same holds for `attack_actor`. A shared shape with two names for the same catalog would still make a caller translate.
+
+A source that raises rather than returning an envelope becomes that source's `unexpected_error` entry. Letting it propagate would return no envelope at all and discard what every other source had already found, which is the opposite of what the shape promises.
+
 ### `ok: false` means the caller must change something
 
 | Situation | Result |
@@ -79,11 +83,15 @@ Every entry has the same shape whether it succeeded or not, so a consumer iterat
 
 ### No verdict, anywhere
 
-Parallel fetch is fine; scoring is not. `enrich` calls many sources at once and reports what each returned, and deliberately produces no overall verdict or confidence score. Such a value silently changes meaning when one provider rate-limits — the same indicator scores differently because of a 429 rather than because of evidence — and the caller cannot see that happen. A provider's own verdict field passes through untouched; nothing is aggregated.
+Parallel fetch is fine; scoring is not. `enrich` calls many sources at once and reports what each returned, and deliberately produces no overall verdict or confidence score. Such a value silently changes meaning when one provider rate-limits — the same indicator scores differently because of a 429 rather than because of evidence — and the caller cannot see that happen.
+
+The rule is per source as well as across them. A provider's own fields pass through under the provider's own names — VirusTotal's `last_analysis_stats`, AbuseIPDB's `abuse_confidence_score`, GreyNoise's `classification`, Safe Browsing's `matched` — and ThreatSyft adds no field of its own that reduces them. Every source once carried a project-computed `verdict` built from local thresholds; those are gone. They failed the same test the aggregate does: "one engine of 43 flagged this" became `malicious`, "the host has a CVE" became `suspicious`, and "no reports" became `benign`, each losing the evidence that made the claim weak. Every one of them was derivable by the caller from fields that are still there, which is where that judgement belongs.
 
 ### Responses stay small by default, and stay navigable
 
 Large fields are trimmed to identity rather than hidden behind a verbosity flag. A technique returns its mitigations as `{id, name, url}`; the full write-up is `lookup("M1038")` away. A flag would make the model choose how much detail it wants before seeing any, so it would either always ask for everything or guess.
+
+Trimming and omitting are different, and only one thing is omitted. Everything trimmed keeps its ID and is reachable by a follow-up `lookup`: mitigations, subtechniques, a tactic's technique list, an actor's technique list, KEV search rows. LOLBAS command examples are the exception — they are working invocations of the abuse, no tool returns them, and the entry says so in `command_examples_note` rather than leaving a caller to hunt for a call that does not exist. The defensive half of that catalog, `detections`, is returned in full.
 
 ### Snapshot age rides along
 
