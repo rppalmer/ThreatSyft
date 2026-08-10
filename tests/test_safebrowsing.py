@@ -41,7 +41,9 @@ def test_google_safebrowsing_check_url_no_match(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["data"]["matched"] is False
     assert result["data"]["matches"] == []
-    assert result["data"]["verdict"] == "benign"
+    # `matched` is Google's answer. A second field restating it as a verdict
+    # only invites reading "no match" as "safe", which the note denies.
+    assert "verdict" not in result["data"]
 
 
 def test_google_safebrowsing_check_url_match(monkeypatch) -> None:
@@ -80,7 +82,7 @@ def test_google_safebrowsing_check_url_match(monkeypatch) -> None:
     assert result["data"]["matched"] is True
     assert result["data"]["matches"][0]["threat_type"] == "MALWARE"
     assert result["data"]["matches"][0]["metadata"] == {"malware_threat_type": "landing"}
-    assert result["data"]["verdict"] == "malicious"
+    assert "verdict" not in result["data"]
 
 
 def test_google_safebrowsing_check_url_authentication_error(monkeypatch) -> None:

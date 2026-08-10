@@ -96,7 +96,6 @@ def alienvault_indicator_lookup(indicator: str) -> dict[str, Any]:
             "reputation": payload.get("reputation"),
             "validation": payload.get("validation"),
             "sections": _sorted_strings(payload.get("sections")),
-            "verdict": "suspicious" if pulse_count > 0 else "unknown",
             "source": "alienvault_otx",
             "source_url": url,
             "note": "OTX pulses provide community context and are not proof of maliciousness.",

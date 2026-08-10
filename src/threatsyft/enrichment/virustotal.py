@@ -75,7 +75,6 @@ def virustotal_ip_report(ip: str) -> dict[str, Any]:
             "tags": _string_list(attributes.get("tags")),
             "last_analysis_date": _timestamp_to_iso(attributes.get("last_analysis_date")),
             "last_modification_date": _timestamp_to_iso(attributes.get("last_modification_date")),
-            "verdict": _virustotal_verdict(last_analysis_stats, reputation),
             "source": "virustotal",
             "source_url": f"https://www.virustotal.com/gui/ip-address/{normalized_ip}",
         },
@@ -126,7 +125,6 @@ def virustotal_domain_report(domain: str) -> dict[str, Any]:
             "tags": _string_list(attributes.get("tags")),
             "last_analysis_date": _timestamp_to_iso(attributes.get("last_analysis_date")),
             "last_modification_date": _timestamp_to_iso(attributes.get("last_modification_date")),
-            "verdict": _virustotal_verdict(last_analysis_stats, reputation),
             "source": "virustotal",
             "source_url": f"https://www.virustotal.com/gui/domain/{normalized_domain}",
         },
@@ -180,7 +178,6 @@ def virustotal_url_report(url: str) -> dict[str, Any]:
             "last_analysis_date": _timestamp_to_iso(attributes.get("last_analysis_date")),
             "last_modification_date": _timestamp_to_iso(attributes.get("last_modification_date")),
             "last_http_response_code": attributes.get("last_http_response_code"),
-            "verdict": _virustotal_verdict(last_analysis_stats, reputation),
             "source": "virustotal",
             "source_url": f"https://www.virustotal.com/gui/url/{url_id}",
         },
@@ -238,7 +235,6 @@ def virustotal_file_report(file_hash: str) -> dict[str, Any]:
             "last_submission_date": _timestamp_to_iso(attributes.get("last_submission_date")),
             "last_analysis_date": _timestamp_to_iso(attributes.get("last_analysis_date")),
             "last_modification_date": _timestamp_to_iso(attributes.get("last_modification_date")),
-            "verdict": _virustotal_verdict(last_analysis_stats, reputation),
             "source": "virustotal",
             "source_url": f"https://www.virustotal.com/gui/file/{normalized_hash}",
         },
@@ -317,20 +313,6 @@ def _extract_attributes(
     return attributes
 
 
-def _virustotal_verdict(last_analysis_stats: dict[str, Any], reputation: int | None) -> str:
-    malicious = _int_or_zero(last_analysis_stats.get("malicious"))
-    suspicious = _int_or_zero(last_analysis_stats.get("suspicious"))
-    harmless = _int_or_zero(last_analysis_stats.get("harmless"))
-
-    if malicious > 0:
-        return "malicious"
-    if suspicious > 0 or (reputation is not None and reputation < 0):
-        return "suspicious"
-    if harmless > 0 and malicious == 0 and suspicious == 0:
-        return "benign"
-    return "unknown"
-
-
 def _dict_or_empty(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
@@ -373,10 +355,6 @@ def _int_or_none(value: object) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
-
-
-def _int_or_zero(value: object) -> int:
-    return _int_or_none(value) or 0
 
 
 def _url_identifier(url: str) -> str:

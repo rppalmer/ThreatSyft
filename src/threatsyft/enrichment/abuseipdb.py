@@ -113,32 +113,9 @@ def abuseipdb_check_ip(ip: str, max_age_days: int = 90) -> dict[str, Any]:
             "domain": data.get("domain"),
             "is_tor": data.get("isTor"),
             "last_reported_at": data.get("lastReportedAt"),
-            "verdict": _abuseipdb_verdict(
-                abuse_score,
-                total_reports,
-                data.get("isWhitelisted"),
-            ),
             "source": "abuseipdb",
         },
     )
-
-
-def _abuseipdb_verdict(
-    abuse_score: int | None,
-    total_reports: int | None,
-    is_whitelisted: object,
-) -> str:
-    if is_whitelisted is True and abuse_score == 0:
-        return "benign"
-    if abuse_score is None and total_reports is None:
-        return "unknown"
-    if abuse_score is not None and abuse_score >= 75:
-        return "malicious"
-    has_score = abuse_score is not None and abuse_score > 0
-    has_reports = total_reports is not None and total_reports > 0
-    if has_score or has_reports:
-        return "suspicious"
-    return "benign"
 
 
 def _int_or_none(value: object) -> int | None:

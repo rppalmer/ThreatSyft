@@ -1,7 +1,9 @@
+import importlib
+import pkgutil
+
 import pytest
 
 from threatsyft.core import ErrorCode
-from threatsyft.enrichment import enrich as enrich_module
 from threatsyft.enrichment.enrich import DISPATCH, enrich
 from threatsyft.enrichment.models import InputValidationError, classify_indicator
 
@@ -262,18 +264,41 @@ def test_redirect_uses_a_declared_error_code() -> None:
     assert enrich("CVE-2024-1234")["error"]["code"] in ErrorCode.__args__
 
 
-def test_enrich_does_not_return_a_verdict_or_confidence(monkeypatch) -> None:
+def test_enrich_aggregates_nothing_across_sources(monkeypatch) -> None:
     """H7: no scalar judgement anywhere. The caller is the reasoning layer."""
-    _stub_dispatch(monkeypatch, "ip", [("abuseipdb", _ok({"verdict": "benign"}))])
+    _stub_dispatch(
+        monkeypatch,
+        "ip",
+        [("abuseipdb", _ok({"abuse_confidence_score": 100})), ("greynoise", _ok({"noise": True}))],
+    )
 
     data = enrich("8.8.8.8")["data"]
 
     assert "overall_verdict" not in data
     assert "confidence" not in data
     assert "key_signals" not in data
-    # A provider's own verdict field is passed through untouched, not aggregated.
-    assert data["sources"]["abuseipdb"]["data"]["verdict"] == "benign"
+    # Each source's own fields arrive untouched; nothing is reduced across them.
+    assert data["sources"]["abuseipdb"]["data"] == {"abuse_confidence_score": 100}
 
 
-def test_enrich_module_exposes_no_scoring_helpers() -> None:
-    assert not [name for name in dir(enrich_module) if "verdict" in name or "confidence" in name]
+def test_no_enrichment_module_computes_a_verdict() -> None:
+    """The doctrine is project-wide, not enrich.py-wide.
+
+    Asserting this against enrich.py alone passed for as long as it existed,
+    because enrich.py never had a scoring helper. Six providers did: each had
+    grown its own threshold table turning provider numbers into malicious /
+    suspicious / benign, which is exactly the value that changes meaning when a
+    source degrades. Walk the whole package instead of one module.
+    """
+    package = importlib.import_module("threatsyft.enrichment")
+
+    offenders = []
+    for module_info in pkgutil.iter_modules(package.__path__):
+        module = importlib.import_module(f"{package.__name__}.{module_info.name}")
+        offenders += [
+            f"{module_info.name}.{name}"
+            for name in vars(module)
+            if "verdict" in name.lower() or "confidence" in name.lower()
+        ]
+
+    assert offenders == [], f"scoring helpers found: {offenders}"

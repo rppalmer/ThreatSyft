@@ -100,7 +100,6 @@ def shodan_host_lookup(ip: str) -> dict[str, Any]:
             "vulnerabilities": vulnerabilities,
             "tags": _sorted_strings(payload.get("tags")),
             "last_update": payload.get("last_update"),
-            "verdict": _shodan_verdict(services, vulnerabilities),
             "source": "shodan",
             "source_url": f"https://www.shodan.io/host/{normalized_ip}",
         },
@@ -154,14 +153,6 @@ def _extract_vulnerabilities(payload: dict[str, Any]) -> list[str]:
         if isinstance(service_vulns, dict | list):
             found.update(vuln for vuln in service_vulns if isinstance(vuln, str))
     return sorted(found)
-
-
-def _shodan_verdict(services: list[dict[str, Any]], vulnerabilities: list[str]) -> str:
-    if vulnerabilities:
-        return "suspicious"
-    if services:
-        return "observed"
-    return "unknown"
 
 
 def _sorted_strings(value: object) -> list[str]:

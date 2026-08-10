@@ -59,7 +59,9 @@ def test_alienvault_indicator_lookup_success(monkeypatch) -> None:
     assert result["data"]["pulses"][0]["name"] == "Example pulse"
     assert result["data"]["pulses"][0]["tags"] == ["botnet", "dns"]
     assert result["data"]["sections"] == ["general", "malware"]
-    assert result["data"]["verdict"] == "suspicious"
+    # Pulse membership is community context, not evidence of maliciousness. The
+    # count is reported; calling it "suspicious" is the caller's decision to make.
+    assert "verdict" not in result["data"]
 
 
 def test_alienvault_indicator_lookup_url_indicator_is_quoted(monkeypatch) -> None:
@@ -82,7 +84,7 @@ def test_alienvault_indicator_lookup_url_indicator_is_quoted(monkeypatch) -> Non
 
     assert result["ok"] is True
     assert result["data"]["indicator_type"] == "url"
-    assert result["data"]["verdict"] == "unknown"
+    assert result["data"]["pulse_count"] == 0
 
 
 def test_alienvault_indicator_lookup_hash_indicator(monkeypatch) -> None:

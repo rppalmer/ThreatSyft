@@ -103,20 +103,9 @@ def _success_from_payload(
             "link": payload.get("link"),
             "last_seen": payload.get("last_seen"),
             "message": payload.get("message"),
-            "verdict": _greynoise_verdict(classification, noise, riot),
             "source": "greynoise",
         },
     )
-
-
-def _greynoise_verdict(classification: object, noise: object, riot: object) -> str:
-    if classification in {"malicious", "benign", "unknown"}:
-        return str(classification)
-    if riot is True:
-        return "benign"
-    if noise is True:
-        return "suspicious"
-    return "unknown"
 
 
 def _response_message(response: httpx.Response) -> str | None:

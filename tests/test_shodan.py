@@ -76,7 +76,9 @@ def test_shodan_host_lookup_success_with_vulnerabilities(monkeypatch) -> None:
     assert result["data"]["services"][0]["port"] == 53
     assert result["data"]["services"][1]["ssl"] is True
     assert result["data"]["vulnerabilities"] == ["CVE-2020-0001", "CVE-2021-0002"]
-    assert result["data"]["verdict"] == "suspicious"
+    # A host carrying a CVE is vulnerable, which is not the same claim as
+    # suspicious. The CVE list is reported; the inference is the caller's.
+    assert "verdict" not in result["data"]
 
 
 def test_shodan_host_lookup_sparse_success(monkeypatch) -> None:
@@ -96,10 +98,10 @@ def test_shodan_host_lookup_sparse_success(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["data"]["services"] == []
     assert result["data"]["ports"] == []
-    assert result["data"]["verdict"] == "unknown"
+    assert result["data"]["vulnerabilities"] == []
 
 
-def test_shodan_host_lookup_observed_without_vulnerabilities(monkeypatch) -> None:
+def test_shodan_host_lookup_reports_services_without_vulnerabilities(monkeypatch) -> None:
     monkeypatch.setenv("SHODAN_API_KEY", "test-key")
 
     def fake_get(url: str, params: dict[str, object], timeout: float) -> httpx.Response:
@@ -117,7 +119,8 @@ def test_shodan_host_lookup_observed_without_vulnerabilities(monkeypatch) -> Non
     result = shodan.shodan_host_lookup("8.8.8.8")
 
     assert result["ok"] is True
-    assert result["data"]["verdict"] == "observed"
+    assert result["data"]["services"][0]["port"] == 443
+    assert result["data"]["vulnerabilities"] == []
 
 
 def test_shodan_host_lookup_authentication_error(monkeypatch) -> None:

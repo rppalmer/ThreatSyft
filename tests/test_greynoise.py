@@ -47,7 +47,10 @@ def test_greynoise_ip_context_success(monkeypatch) -> None:
 
     assert result["ok"] is True
     assert result["data"]["riot"] is True
-    assert result["data"]["verdict"] == "benign"
+    # GreyNoise's own classification, passed through under its own name. No
+    # ThreatSyft-computed judgement rides alongside it.
+    assert result["data"]["classification"] == "benign"
+    assert "verdict" not in result["data"]
 
 
 def test_greynoise_ip_context_not_observed(monkeypatch) -> None:
@@ -71,7 +74,7 @@ def test_greynoise_ip_context_not_observed(monkeypatch) -> None:
 
     assert result["ok"] is True
     assert result["data"]["noise"] is False
-    assert result["data"]["verdict"] == "unknown"
+    assert "verdict" not in result["data"]
 
 
 def test_greynoise_ip_context_authentication_error(monkeypatch) -> None:

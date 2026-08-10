@@ -70,10 +70,13 @@ def test_abuseipdb_check_ip_success(monkeypatch) -> None:
 
     assert result["ok"] is True
     assert result["data"]["abuse_confidence_score"] == 0
-    assert result["data"]["verdict"] == "benign"
+    assert result["data"]["total_reports"] == 0
+    # AbuseIPDB's own score is passed through. Turning "0 reports" into a claim
+    # of benignity is a judgement, and this tool does not make judgements.
+    assert "verdict" not in result["data"]
 
 
-def test_abuseipdb_check_ip_whitelisted_zero_score_is_benign(monkeypatch) -> None:
+def test_abuseipdb_check_ip_reports_whitelisting_alongside_reports(monkeypatch) -> None:
     monkeypatch.setenv("ABUSEIPDB_API_KEY", "test-key")
 
     def fake_get(
@@ -104,7 +107,8 @@ def test_abuseipdb_check_ip_whitelisted_zero_score_is_benign(monkeypatch) -> Non
 
     assert result["ok"] is True
     assert result["data"]["is_whitelisted"] is True
-    assert result["data"]["verdict"] == "benign"
+    assert result["data"]["abuse_confidence_score"] == 0
+    assert result["data"]["total_reports"] == 35
 
 
 def test_abuseipdb_check_ip_authentication_error(monkeypatch) -> None:

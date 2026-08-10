@@ -64,11 +64,17 @@ def test_virustotal_ip_report_success(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["data"]["asn"] == 15169
     assert result["data"]["last_analysis_stats"]["harmless"] == 82
-    assert result["data"]["verdict"] == "benign"
+    assert "verdict" not in result["data"]
     assert result["data"]["last_analysis_date"] == "2024-05-13T14:17:55+00:00"
 
 
-def test_virustotal_ip_report_malicious_verdict(monkeypatch) -> None:
+def test_virustotal_ip_report_passes_analysis_stats_through_unjudged(monkeypatch) -> None:
+    """One flagging engine out of 43 is a number, not a conclusion.
+
+    The engine counts and VirusTotal's own reputation come back untouched so the
+    caller can weigh them; collapsing them to "malicious" here would hide how
+    thin the evidence is.
+    """
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "test-key")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
@@ -94,7 +100,13 @@ def test_virustotal_ip_report_malicious_verdict(monkeypatch) -> None:
     result = virustotal.virustotal_ip_report("8.8.8.8")
 
     assert result["ok"] is True
-    assert result["data"]["verdict"] == "malicious"
+    assert result["data"]["last_analysis_stats"] == {
+        "harmless": 40,
+        "malicious": 2,
+        "suspicious": 1,
+    }
+    assert result["data"]["reputation"] == -5
+    assert "verdict" not in result["data"]
 
 
 def test_virustotal_ip_report_not_found(monkeypatch) -> None:
@@ -252,11 +264,11 @@ def test_virustotal_domain_report_success(monkeypatch) -> None:
         "value": "93.184.216.34",
         "ttl": 300,
     }
-    assert result["data"]["verdict"] == "benign"
+    assert "verdict" not in result["data"]
     assert result["data"]["source_url"] == "https://www.virustotal.com/gui/domain/example.com"
 
 
-def test_virustotal_domain_report_suspicious_verdict(monkeypatch) -> None:
+def test_virustotal_domain_report_passes_analysis_stats_through_unjudged(monkeypatch) -> None:
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "test-key")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
@@ -282,7 +294,9 @@ def test_virustotal_domain_report_suspicious_verdict(monkeypatch) -> None:
     result = virustotal.virustotal_domain_report("example.com")
 
     assert result["ok"] is True
-    assert result["data"]["verdict"] == "suspicious"
+    assert result["data"]["last_analysis_stats"]["suspicious"] == 2
+    assert result["data"]["reputation"] == -1
+    assert "verdict" not in result["data"]
 
 
 def test_virustotal_domain_report_not_found(monkeypatch) -> None:
@@ -435,13 +449,13 @@ def test_virustotal_url_report_success(monkeypatch) -> None:
     assert result["data"]["id"] == "aHR0cHM6Ly9leGFtcGxlLmNvbS8"
     assert result["data"]["final_url"] == "https://example.com/"
     assert result["data"]["title"] == "Example Domain"
-    assert result["data"]["verdict"] == "benign"
+    assert "verdict" not in result["data"]
     assert result["data"]["source_url"] == (
         "https://www.virustotal.com/gui/url/aHR0cHM6Ly9leGFtcGxlLmNvbS8"
     )
 
 
-def test_virustotal_url_report_malicious_verdict(monkeypatch) -> None:
+def test_virustotal_url_report_passes_analysis_stats_through_unjudged(monkeypatch) -> None:
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "test-key")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
@@ -467,7 +481,9 @@ def test_virustotal_url_report_malicious_verdict(monkeypatch) -> None:
     result = virustotal.virustotal_url_report("https://bad.example/")
 
     assert result["ok"] is True
-    assert result["data"]["verdict"] == "malicious"
+    assert result["data"]["last_analysis_stats"]["malicious"] == 3
+    assert result["data"]["reputation"] == -10
+    assert "verdict" not in result["data"]
 
 
 def test_virustotal_url_report_not_found(monkeypatch) -> None:
@@ -627,10 +643,10 @@ def test_virustotal_file_report_success(monkeypatch) -> None:
     assert result["data"]["sha256"] == (
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     )
-    assert result["data"]["verdict"] == "benign"
+    assert "verdict" not in result["data"]
 
 
-def test_virustotal_file_report_malicious_verdict(monkeypatch) -> None:
+def test_virustotal_file_report_passes_analysis_stats_through_unjudged(monkeypatch) -> None:
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "test-key")
 
     def fake_get(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
@@ -656,7 +672,9 @@ def test_virustotal_file_report_malicious_verdict(monkeypatch) -> None:
     result = virustotal.virustotal_file_report("A" * 64)
 
     assert result["ok"] is True
-    assert result["data"]["verdict"] == "malicious"
+    assert result["data"]["last_analysis_stats"]["malicious"] == 20
+    assert result["data"]["reputation"] == -25
+    assert "verdict" not in result["data"]
 
 
 def test_virustotal_file_report_not_found(monkeypatch) -> None:

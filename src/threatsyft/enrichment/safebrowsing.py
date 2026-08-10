@@ -109,7 +109,6 @@ def google_safebrowsing_check_url(url: str) -> dict[str, Any]:
             "url": normalized_url,
             "matched": bool(compact_matches),
             "matches": compact_matches,
-            "verdict": "malicious" if compact_matches else "benign",
             "source": "google_safebrowsing",
             "source_url": "https://developers.google.com/safe-browsing/v4/lookup-api",
             "note": (
