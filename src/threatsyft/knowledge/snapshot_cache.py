@@ -16,7 +16,16 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
-_lock = Lock()
+# One lock per snapshot path rather than one global lock. Holding a lock across
+# the parse is the point of it (see load_cached), and a single global lock would
+# make a cold KEV parse wait behind a cold ATT&CK parse for no reason.
+_registry_lock = Lock()
+_path_locks: dict[str, Lock] = {}
+
+
+def _lock_for(key: str) -> Lock:
+    with _registry_lock:
+        return _path_locks.setdefault(key, Lock())
 
 
 def write_snapshot(path: Path, payload: Any) -> None:
@@ -52,6 +61,15 @@ def load_cached[T](cache: dict[str, tuple[float, T]], path: Path, parse: Callabl
     ``parse`` is only invoked on a cache miss and is responsible for reading and
     parsing ``path``. A parse that raises (missing or malformed snapshot) is never
     cached, so the proper load error surfaces on every call until the file is fixed.
+
+    The parse runs *inside* the per-path lock, so concurrent misses on the same
+    snapshot parse once and the rest wait for the result. Callers fan out: a
+    bare-name ``lookup`` asks the tactic and threat-actor catalogs in two threads,
+    and both resolve against the same file. Parsing outside the lock let both
+    threads read and parse the 47 MB ATT&CK snapshot at once on a cold cache,
+    which roughly doubled peak memory for no benefit. A hit stays lock-free —
+    the dict read is atomic, and it is the path taken by every call after the
+    first.
     """
     key = str(path)
     try:
@@ -60,13 +78,17 @@ def load_cached[T](cache: dict[str, tuple[float, T]], path: Path, parse: Callabl
         # Missing or unreadable: let parse() raise the domain-specific load error.
         return parse()
 
-    with _lock:
+    entry = cache.get(key)
+    if entry is not None and entry[0] == mtime:
+        return entry[1]
+
+    with _lock_for(key):
+        # Re-checked under the lock: whoever held it first may have parsed this
+        # very snapshot while this thread was waiting.
         entry = cache.get(key)
         if entry is not None and entry[0] == mtime:
             return entry[1]
 
-    value = parse()
-
-    with _lock:
+        value = parse()
         cache[key] = (mtime, value)
-    return value
+        return value
