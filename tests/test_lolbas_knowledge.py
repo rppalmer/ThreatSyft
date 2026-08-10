@@ -50,6 +50,21 @@ def test_lolbas_lookup_success(monkeypatch) -> None:
     assert "Command" not in result["data"]["entry"]
 
 
+def test_omitted_commands_say_they_are_not_reachable(monkeypatch) -> None:
+    """Everything else trimmed comes back via a follow-up lookup. These do not.
+
+    Without saying so, `command_examples_omitted` reads like the rest of the
+    trimming and invites a caller to go looking for the call that returns them.
+    The detection content, which is the defensive half, is returned in full.
+    """
+    monkeypatch.setenv("THREATSYFT_LOLBAS_PATH", str(FIXTURE_PATH))
+
+    entry = lolbas.lolbas_lookup("certutil.exe")["data"]["entry"]
+
+    assert "not returned by any tool" in entry["command_examples_note"]
+    assert entry["detections"], "detection content must not be trimmed"
+
+
 def test_lolbas_lookup_invalid_name() -> None:
     result = lolbas.lolbas_lookup(" ")
 

@@ -277,7 +277,16 @@ def _entry_data(entry: LolbasEntry) -> dict[str, Any]:
         "detections": entry.detections,
         "resources": entry.resources,
         "command_count": entry.command_count,
+        # The one field trimmed out of a response that no follow-up call brings
+        # back, so it says so rather than looking like the rest of the trimming.
+        # LOLBAS command examples are working invocations of the abuse, which is
+        # the offensive half of the catalog; `detections` carries the defensive
+        # half and is returned in full.
         "command_examples_omitted": True,
+        "command_examples_note": (
+            "Invocation strings are out of scope for this server and are not "
+            "returned by any tool. Detection content is in `detections`."
+        ),
         "source": "LOLBAS",
     }
 

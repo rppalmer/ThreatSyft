@@ -30,6 +30,14 @@ def extract_iocs(text: str) -> dict[str, Any]:
     is kept apart under ``untrusted_context``, keyed by IOC value, never merged
     into a server-authored field. A caller can drop that key entirely without
     losing any indicator.
+
+    ``ioc_counts`` is how many distinct indicators of each type the text
+    contains, counted before the per-type cap is applied, and ``returned_counts``
+    is how many came back. They differ exactly for the types named in
+    ``truncated``. This is the same distinction ``search`` draws between
+    ``match_count`` and ``returned``, and it matters more here: this is the
+    front of the extract-then-enrich pipeline, so a long report quietly losing
+    its last indicators would lose them from everything downstream.
     """
     query = {"text_length": len(text)}
     if not text.strip():
@@ -51,18 +59,29 @@ def extract_iocs(text: str) -> dict[str, Any]:
     _collect_matches(grouped["domains"], normalized_text, DOMAIN_PATTERN, _normalize_domain)
 
     iocs: dict[str, list[dict[str, str]]] = {}
+    found_counts: dict[str, int] = {}
     untrusted_context: dict[str, list[str]] = {}
     for ioc_type, values in grouped.items():
+        # Sorted so the retained set is deterministic rather than depending on
+        # where in the text each indicator happened to appear.
         retained = sorted(values.items())[:MAX_ITEMS_PER_TYPE]
         iocs[ioc_type] = [{"value": value} for value, _ in retained]
+        found_counts[ioc_type] = len(values)
         untrusted_context.update(retained)
+
+    truncated = [
+        ioc_type for ioc_type, total in found_counts.items() if total > len(iocs[ioc_type])
+    ]
 
     return success_response(
         TOOL_NAME,
         query,
         {
             "iocs": iocs,
-            "ioc_counts": {ioc_type: len(items) for ioc_type, items in iocs.items()},
+            "ioc_counts": found_counts,
+            "returned_counts": {ioc_type: len(items) for ioc_type, items in iocs.items()},
+            "truncated": truncated,
+            "max_items_per_type": MAX_ITEMS_PER_TYPE,
             "untrusted_context": untrusted_context,
         },
     )

@@ -55,10 +55,11 @@ def test_extract_iocs_keeps_source_text_out_of_the_ioc_values() -> None:
     assert data["iocs"]["ips"] == [{"value": "156.240.110.244"}]
 
 
-def test_extract_iocs_counts_match_the_returned_items() -> None:
+def test_extract_iocs_counts_match_the_returned_items_when_nothing_is_capped() -> None:
     data = extract_iocs(SAMPLE_TEXT)["data"]
 
-    assert data["ioc_counts"] == {ioc_type: len(items) for ioc_type, items in data["iocs"].items()}
+    assert data["ioc_counts"] == data["returned_counts"]
+    assert data["truncated"] == []
     assert data["ioc_counts"]["ips"] == 1
     assert data["ioc_counts"]["cves"] == 1
 
@@ -118,10 +119,35 @@ def test_extract_iocs_caps_items_per_type() -> None:
     cves = data["iocs"]["cves"]
 
     assert len(cves) == MAX_ITEMS_PER_TYPE
-    assert data["ioc_counts"]["cves"] == MAX_ITEMS_PER_TYPE
     assert cves[0]["value"] == "CVE-2024-1000"
     assert cves[-1]["value"] == f"CVE-2024-{1000 + MAX_ITEMS_PER_TYPE - 1}"
     assert set(data["untrusted_context"]) == _values(cves)
+
+
+def test_a_capped_type_says_how_many_it_is_not_showing() -> None:
+    """A caller must be able to tell 50-of-50 from 50-of-60.
+
+    This is the front of the extract-then-enrich pipeline: indicators dropped
+    here are dropped from every enrichment that follows, so the loss cannot be
+    silent. `ioc_counts` reporting the capped length made the response say it
+    had found exactly as many as it chose to return.
+    """
+    total = MAX_ITEMS_PER_TYPE + 10
+    text = " ".join(f"CVE-2024-{1000 + index}" for index in range(total))
+
+    data = extract_iocs(text)["data"]
+
+    assert data["ioc_counts"]["cves"] == total
+    assert data["returned_counts"]["cves"] == MAX_ITEMS_PER_TYPE
+    assert data["truncated"] == ["cves"]
+    assert data["max_items_per_type"] == MAX_ITEMS_PER_TYPE
+
+
+def test_an_uncapped_type_is_not_listed_as_truncated() -> None:
+    data = extract_iocs("8.8.8.8 and CVE-2024-1000")["data"]
+
+    assert data["truncated"] == []
+    assert data["ioc_counts"]["ips"] == data["returned_counts"]["ips"]
 
 
 def test_extract_iocs_context_is_a_collapsed_window_not_the_whole_text() -> None:
