@@ -31,18 +31,18 @@ SNAPSHOTS = {
     "lolbas": (get_lolbas_path, 180),
 }
 
-# Which snapshot each source name reads. Several lookup sources resolve against
-# the same ATT&CK file, and listing them here rather than duplicating the path
-# and threshold means adding one cannot leave it silently without freshness.
+# Which snapshot each source name reads. Several sources resolve against the
+# same ATT&CK file, and listing them here rather than duplicating the path and
+# threshold means adding one cannot leave it silently without freshness. The
+# keys are source names as they appear in a `sources` map, which `lookup` and
+# `search` now spell identically.
 SOURCE_SNAPSHOTS = {
     "kev": "kev",
     "lolbas": "lolbas",
-    "attack": "attack",
     "attack_technique": "attack",
     "attack_tactic": "attack",
     "attack_mitigation": "attack",
     "attack_actor": "attack",
-    "actors": "attack",
 }
 
 STALE_AFTER_DAYS = {source: SNAPSHOTS[snapshot][1] for source, snapshot in SOURCE_SNAPSHOTS.items()}

@@ -5,8 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from threatsyft.knowledge.freshness import STALE_AFTER_DAYS, snapshot_freshness
-from threatsyft.knowledge.lookup import lookup, search
+from threatsyft.knowledge.freshness import (
+    SOURCE_SNAPSHOTS,
+    STALE_AFTER_DAYS,
+    snapshot_freshness,
+)
+from threatsyft.knowledge.lookup import LOOKUP_SOURCE_NAMES, SEARCH_SOURCES, lookup, search
 
 KEV_FIXTURE = Path("tests/fixtures/cisa-kev-mini.json")
 LOLBAS_FIXTURE = Path("tests/fixtures/lolbas-mini.json")
@@ -31,7 +35,7 @@ def local_snapshots(monkeypatch):
 
 def test_thresholds_differ_per_source() -> None:
     """One global threshold would be wrong: KEV changes weekly, ATT&CK a few times a year."""
-    assert STALE_AFTER_DAYS["kev"] < STALE_AFTER_DAYS["attack"]
+    assert STALE_AFTER_DAYS["kev"] < STALE_AFTER_DAYS["attack_technique"]
 
 
 def test_a_fresh_snapshot_is_not_stale(monkeypatch, tmp_path) -> None:
@@ -63,7 +67,7 @@ def test_the_same_age_is_stale_for_kev_but_not_for_attack(monkeypatch, tmp_path)
     )
 
     assert snapshot_freshness("kev")["stale"] is True
-    assert snapshot_freshness("attack")["stale"] is False
+    assert snapshot_freshness("attack_technique")["stale"] is False
 
 
 def test_a_missing_snapshot_reports_unknown_age_rather_than_guessing(monkeypatch) -> None:
@@ -103,7 +107,7 @@ def test_lookup_reports_freshness_on_the_success_path() -> None:
 def test_search_reports_freshness_for_every_snapshot_source() -> None:
     sources = search("cert")["data"]["sources"]
 
-    for name in ["attack", "actors", "kev", "lolbas"]:
+    for name in SEARCH_SOURCES:
         assert "freshness" in sources[name], name
 
 
@@ -119,7 +123,7 @@ def test_freshness_never_refuses_to_answer(monkeypatch, tmp_path) -> None:
 
 
 def test_as_of_is_a_parseable_timestamp() -> None:
-    as_of = snapshot_freshness("attack")["as_of"]
+    as_of = snapshot_freshness("attack_technique")["as_of"]
 
     assert datetime.fromisoformat(as_of) < datetime.now(
         datetime.now().astimezone().tzinfo
@@ -127,27 +131,29 @@ def test_as_of_is_a_parseable_timestamp() -> None:
 
 
 def test_every_lookup_and_search_source_has_freshness_configured() -> None:
-    """A source added to lookup or search must not silently lose its age."""
-    from threatsyft.knowledge.freshness import SOURCE_SNAPSHOTS
-    from threatsyft.knowledge.lookup import SEARCH_SOURCES
+    """A source added to lookup or search must not silently lose its age.
 
+    Both halves are derived from the tables the tools actually dispatch on.
+    Restating lookup's source names here instead let a source be added to
+    lookup and arrive with no age at all, which is the one thing this file
+    exists to prevent.
+    """
     live_sources = {"nvd"}
-    names = set(SEARCH_SOURCES) | {
-        "attack_technique",
-        "attack_tactic",
-        "attack_mitigation",
-        "attack_actor",
-        "lolbas",
-        "kev",
-    }
+    names = set(SEARCH_SOURCES) | LOOKUP_SOURCE_NAMES
 
     assert names - live_sources <= set(SOURCE_SNAPSHOTS)
 
 
-def test_source_names_sharing_a_snapshot_report_the_same_age() -> None:
-    ages = {
-        source: snapshot_freshness(source)["as_of"]
-        for source in ["attack", "attack_technique", "attack_tactic", "attack_actor"]
-    }
+def test_lookup_and_search_name_the_same_catalog_the_same_way() -> None:
+    """One vocabulary across both tools, so a caller iterating either sees one name."""
+    assert set(SEARCH_SOURCES) <= LOOKUP_SOURCE_NAMES
 
+
+def test_source_names_sharing_a_snapshot_report_the_same_age() -> None:
+    attack_sources = [
+        source for source, snapshot in SOURCE_SNAPSHOTS.items() if snapshot == "attack"
+    ]
+    ages = {source: snapshot_freshness(source)["as_of"] for source in attack_sources}
+
+    assert len(attack_sources) > 1, "nothing shared, so nothing to check"
     assert len(set(ages.values())) == 1, ages

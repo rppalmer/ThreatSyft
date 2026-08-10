@@ -75,6 +75,18 @@ def test_kev_search_returns_matches(monkeypatch) -> None:
     assert "MOVEit" in result["data"]["matches"][0]["matched_context"]
 
 
+def test_kev_search_rows_are_identity_not_the_whole_record(monkeypatch) -> None:
+    """Same trimming rule as the ATT&CK and LOLBAS searches; detail via lookup."""
+    monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
+
+    match = kev.kev_search("MOVEit", limit=5)["data"]["matches"][0]
+    full = kev.kev_lookup("CVE-2023-34362")["data"]["vulnerability"]
+
+    for field in ["short_description", "required_action", "notes", "cwes"]:
+        assert field not in match, field
+        assert field in full, f"{field} must stay reachable through lookup"
+
+
 def test_kev_search_limit_validation(monkeypatch) -> None:
     monkeypatch.setenv("THREATSYFT_CISA_KEV_PATH", str(FIXTURE_PATH))
 

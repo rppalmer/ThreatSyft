@@ -218,7 +218,7 @@ def _search_entries(
     scored.sort(key=lambda item: (-item[0], item[1].cve_id))
     return len(scored), [
         {
-            **_entry_data(entry),
+            **_entry_summary(entry),
             "score": score,
             "matched_context": _matched_context(entry, query_lower),
         }
@@ -271,17 +271,31 @@ def _matched_context(entry: KevEntry, query: str) -> str | None:
     return None
 
 
-def _entry_data(entry: KevEntry) -> dict[str, Any]:
+def _entry_summary(entry: KevEntry) -> dict[str, Any]:
+    """Enough to recognise a KEV entry and look it up, without its prose.
+
+    The same trimming rule the ATT&CK and LOLBAS searches follow. Ten full KEV
+    records made this the largest source in a `search` response by more than the
+    other three combined, and every field left out is one `lookup(cve_id)` away.
+    `known_ransomware_campaign_use` stays because it is one word and it is the
+    field a reader triages on.
+    """
     return {
         "cve_id": entry.cve_id,
         "vendor_project": entry.vendor_project,
         "product": entry.product,
         "vulnerability_name": entry.vulnerability_name,
         "date_added": entry.date_added,
+        "known_ransomware_campaign_use": entry.known_ransomware_campaign_use,
+    }
+
+
+def _entry_data(entry: KevEntry) -> dict[str, Any]:
+    return {
+        **_entry_summary(entry),
         "short_description": entry.short_description,
         "required_action": entry.required_action,
         "due_date": entry.due_date,
-        "known_ransomware_campaign_use": entry.known_ransomware_campaign_use,
         "notes": entry.notes,
         "cwes": entry.cwes,
         "source": "CISA Known Exploited Vulnerabilities Catalog",

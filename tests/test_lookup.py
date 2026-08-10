@@ -71,7 +71,7 @@ def test_lookup_normalizes_the_reference_it_echoes_back() -> None:
 
 
 def test_search_sources_are_all_callable() -> None:
-    assert set(SEARCH_SOURCES) == {"attack", "actors", "kev", "lolbas"}
+    assert set(SEARCH_SOURCES) == {"attack_technique", "attack_actor", "kev", "lolbas"}
     for name, function in SEARCH_SOURCES.items():
         assert callable(function), name
 
@@ -156,7 +156,7 @@ def test_search_rejects_an_empty_query() -> None:
 def test_search_all_queries_every_source_and_never_merges_them() -> None:
     data = search("cert")["data"]
 
-    assert list(data["sources"]) == ["attack", "actors", "kev", "lolbas"]
+    assert list(data["sources"]) == list(SEARCH_SOURCES)
     assert "matches" not in data, "results must stay grouped by source, never merge-ranked"
 
 
@@ -260,7 +260,7 @@ def test_an_actor_carries_the_techniques_it_uses_as_identities() -> None:
 
 
 def test_search_includes_actors_as_its_own_group() -> None:
-    entry = search("Fixture", source="actors")["data"]["sources"]["actors"]
+    entry = search("Fixture", source="attack_actor")["data"]["sources"]["attack_actor"]
 
     assert entry["ok"] is True
     assert entry["match_count"] >= 1
@@ -268,6 +268,6 @@ def test_search_includes_actors_as_its_own_group() -> None:
 
 
 def test_actor_search_matches_aliases_not_just_names() -> None:
-    entry = search("Test Panda", source="actors")["data"]["sources"]["actors"]
+    entry = search("Test Panda", source="attack_actor")["data"]["sources"]["attack_actor"]
 
     assert any(match["actor_id"] == "G9001" for match in entry["matches"])

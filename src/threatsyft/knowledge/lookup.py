@@ -7,7 +7,8 @@ a caller written against one iterates the other unchanged.
 from __future__ import annotations
 
 import re
-from typing import Any
+from collections.abc import Callable
+from typing import Any, NamedTuple
 
 from threatsyft.core import InputValidationError, build_sources, error_response, success_response
 
@@ -47,11 +48,83 @@ ACTOR_PATTERN = re.compile(r"^G\d{4}$", re.IGNORECASE)
 TECHNIQUE_LOLBAS_LIMIT = 5
 
 SEARCH_SOURCES = {
-    "attack": run_attack_search,
-    "actors": attack_actor_search,
+    "attack_technique": run_attack_search,
+    "attack_actor": attack_actor_search,
     "kev": run_kev_search,
     "lolbas": run_lolbas_search,
 }
+
+SourceFunction = tuple[str, Callable[[str], dict[str, Any]]]
+
+
+class ReferenceType(NamedTuple):
+    """One kind of reference `lookup` recognises, and what answers it."""
+
+    name: str
+    # None matches anything, which is how the bare-name fallback is expressed.
+    pattern: re.Pattern[str] | None
+    normalize: Callable[[str], str]
+    sources: tuple[SourceFunction, ...]
+
+
+# Tried in order, first match wins. Data rather than a chain of if-statements so
+# the set of source names a lookup can produce is enumerable: `test_freshness`
+# derives its expectation from this table, so a source added here cannot
+# silently arrive without its snapshot age. `enrich.DISPATCH` and
+# `SEARCH_SOURCES` are tables for the same reason.
+REFERENCE_TYPES: tuple[ReferenceType, ...] = (
+    ReferenceType(
+        "cve",
+        CVE_PATTERN,
+        normalize_cve_id,
+        (("nvd", cve_lookup), ("kev", kev_lookup)),
+    ),
+    ReferenceType(
+        "attack_tactic",
+        TACTIC_PATTERN,
+        str.upper,
+        (("attack_tactic", attack_tactic_lookup),),
+    ),
+    ReferenceType(
+        "attack_mitigation",
+        MITIGATION_PATTERN,
+        str.upper,
+        (("attack_mitigation", attack_mitigation_lookup),),
+    ),
+    ReferenceType(
+        "attack_actor",
+        ACTOR_PATTERN,
+        str.upper,
+        (("attack_actor", attack_actor_lookup),),
+    ),
+    ReferenceType(
+        "attack_technique",
+        TECHNIQUE_PATTERN,
+        normalize_technique_id,
+        (
+            ("attack_technique", attack_technique_lookup),
+            ("lolbas", lambda value: run_lolbas_search(value, TECHNIQUE_LOLBAS_LIMIT)),
+        ),
+    ),
+    # A bare name could be a LOLBAS binary ("Certutil.exe"), an ATT&CK tactic
+    # ("execution") or a threat actor ("APT29", "Cozy Bear"), and telling them
+    # apart up front would mean guessing. Ask all three instead: they are local,
+    # fast, and whichever knows the name answers. That is the same principle the
+    # rest of the design follows - collect from every source that might have it
+    # and let the caller see which one did.
+    ReferenceType(
+        "name",
+        None,
+        str,
+        (
+            ("lolbas", lolbas_lookup),
+            ("attack_tactic", attack_tactic_lookup),
+            ("attack_actor", attack_actor_lookup),
+        ),
+    ),
+)
+
+LOOKUP_SOURCE_NAMES = {name for reference in REFERENCE_TYPES for name, _ in reference.sources}
 
 
 def lookup(reference: str) -> dict[str, Any]:
@@ -154,53 +227,13 @@ def _attach_freshness(source_entries: dict[str, dict[str, Any]]) -> None:
             entry["freshness"] = freshness
 
 
-def _classify_reference(value: str) -> tuple[str, str, tuple[tuple[str, Any], ...]]:
+def _classify_reference(value: str) -> tuple[str, str, tuple[SourceFunction, ...]]:
     """Return the reference type, its normalized form, and the sources covering it."""
-    if CVE_PATTERN.fullmatch(value):
-        return (
-            "cve",
-            normalize_cve_id(value),
-            (("nvd", cve_lookup), ("kev", kev_lookup)),
-        )
+    for reference in REFERENCE_TYPES:
+        if reference.pattern is None or reference.pattern.fullmatch(value):
+            return reference.name, reference.normalize(value), reference.sources
 
-    if TACTIC_PATTERN.fullmatch(value):
-        return "attack_tactic", value.upper(), (("attack_tactic", attack_tactic_lookup),)
-
-    if MITIGATION_PATTERN.fullmatch(value):
-        return (
-            "attack_mitigation",
-            value.upper(),
-            (("attack_mitigation", attack_mitigation_lookup),),
-        )
-
-    if ACTOR_PATTERN.fullmatch(value):
-        return "attack_actor", value.upper(), (("attack_actor", attack_actor_lookup),)
-
-    if TECHNIQUE_PATTERN.fullmatch(value):
-        return (
-            "attack_technique",
-            normalize_technique_id(value),
-            (
-                ("attack_technique", attack_technique_lookup),
-                ("lolbas", lambda v: run_lolbas_search(v, TECHNIQUE_LOLBAS_LIMIT)),
-            ),
-        )
-
-    # A bare name could be a LOLBAS binary ("Certutil.exe"), an ATT&CK tactic
-    # ("execution") or a threat actor ("APT29", "Cozy Bear"), and telling them
-    # apart up front would mean guessing. Ask all three instead: they are local,
-    # fast, and whichever knows the name answers. That is the same principle the
-    # rest of the design follows - collect from every source that might have it
-    # and let the caller see which one did.
-    return (
-        "name",
-        value,
-        (
-            ("lolbas", lolbas_lookup),
-            ("attack_tactic", attack_tactic_lookup),
-            ("attack_actor", attack_actor_lookup),
-        ),
-    )
+    raise AssertionError("REFERENCE_TYPES must end with a row that matches anything.")
 
 
 def _selected_sources(source: str) -> list[str] | None:
