@@ -8,11 +8,19 @@ request writes those keys to stderr, which an MCP host captures into its logs.
 Note that httpx's *error* messages omit the URL, so error handling alone is not
 evidence that keys are safe; ordinary request logging is the exposure.
 
-Two layers, because the first depends on a log level nobody controls:
+Two layers, because the first depends on a level anyone can put back:
 
-1. httpx's request logger is quietened, which removes the known leak.
-2. A filter redacts key-bearing query parameters from every log record, so a
-   future library that logs a URL cannot reintroduce this.
+1. The HTTP libraries' loggers are quietened, which removes the known leak.
+2. A redacting filter is attached to those same loggers, so if something raises
+   the level again — a host that configures logging, a deliberate debug session
+   — the URLs still come out without their credentials.
+
+The filter goes on the HTTP loggers themselves, not on the root logger. A
+logger's filters are applied only to records logged *through* that logger:
+records propagating up from ``httpx`` never meet a filter installed on root, so
+redacting there looks configured and does nothing. For the same reason the
+filter is attached to httpcore's child loggers (``httpcore.connection`` and
+friends) individually rather than to ``httpcore`` alone.
 """
 
 from __future__ import annotations
@@ -21,8 +29,11 @@ import logging
 import re
 
 # Query parameters whose values are credentials. Matched case-insensitively
-# against the whole record, including the exception text.
+# against the record's formatted message.
 SECRET_QUERY_PARAMS = ("key", "apikey", "api_key", "token", "auth", "password")
+
+# The library namespaces that log request URLs.
+URL_LOGGER_PREFIXES = ("httpx", "httpcore")
 
 _SECRET_PATTERN = re.compile(
     r"(?i)\b(" + "|".join(SECRET_QUERY_PARAMS) + r")=([^&\s\"'<>]+)",
@@ -31,20 +42,31 @@ REDACTED = r"\1=[REDACTED]"
 
 
 class RedactSecretsFilter(logging.Filter):
-    """Strip credential-bearing query parameters from log records."""
+    """Strip credential-bearing query parameters from log records.
+
+    The record is formatted here rather than having its ``msg`` and ``args``
+    rewritten in place, because the secret usually is not a string at this
+    point. httpx logs ``logger.info("HTTP Request: %s %s ...", method, url)``
+    and passes an ``httpx.URL`` object, so a filter that only rewrites string
+    arguments walks straight past the credential and the leak reappears when
+    the handler formats the record later.
+
+    Formatting early costs nothing on these loggers, which are quietened to
+    WARNING, and the substitution only replaces the record when it changed
+    something.
+    """
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if isinstance(record.msg, str):
-            record.msg = redact(record.msg)
-        if record.args:
-            record.args = tuple(
-                redact(arg) if isinstance(arg, str) else arg for arg in _as_tuple(record.args)
-            )
+        try:
+            message = record.getMessage()
+        except Exception:  # pragma: no cover - a broken format string is not ours to fix
+            return True
+
+        redacted = redact(message)
+        if redacted != message:
+            record.msg = redacted
+            record.args = ()
         return True
-
-
-def _as_tuple(args: object) -> tuple:
-    return args if isinstance(args, tuple) else (args,)
 
 
 def redact(value: str) -> str:
@@ -58,13 +80,26 @@ def configure_logging() -> None:
     Called from every entry point. Cheap and idempotent, so calling it twice is
     harmless.
     """
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    for name in URL_LOGGER_PREFIXES:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
-    secrets_filter = RedactSecretsFilter()
-    root = logging.getLogger()
-    if not any(isinstance(existing, RedactSecretsFilter) for existing in root.filters):
-        root.addFilter(secrets_filter)
-    for handler in root.handlers:
-        if not any(isinstance(existing, RedactSecretsFilter) for existing in handler.filters):
-            handler.addFilter(secrets_filter)
+    for logger in _url_loggers():
+        if not any(isinstance(existing, RedactSecretsFilter) for existing in logger.filters):
+            logger.addFilter(RedactSecretsFilter())
+
+
+def _url_loggers() -> list[logging.Logger]:
+    """The URL-logging namespaces, plus any descendants already created.
+
+    Descendants are found rather than named, because they belong to a
+    third-party library: httpcore splits its logging across ``httpcore.http11``,
+    ``httpcore.connection`` and others, and hard-coding that list would rot the
+    next time it changes.
+    """
+    loggers = [logging.getLogger(name) for name in URL_LOGGER_PREFIXES]
+    for name, existing in list(logging.root.manager.loggerDict.items()):
+        if not isinstance(existing, logging.Logger):
+            continue
+        if any(name.startswith(f"{prefix}.") for prefix in URL_LOGGER_PREFIXES):
+            loggers.append(existing)
+    return loggers
