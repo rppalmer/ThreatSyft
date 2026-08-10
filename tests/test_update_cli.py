@@ -17,9 +17,19 @@ def _failed(tool, message="Download failed."):
     }
 
 
+@pytest.fixture
+def real_sources():
+    """The sources the command actually offers, so a new one is not missed here."""
+    return list(update_cli.UPDATE_FUNCTIONS)
+
+
 @pytest.fixture(autouse=True)
-def stub_updaters(monkeypatch):
-    """No network. Records which snapshots were asked for."""
+def stub_updaters(monkeypatch, real_sources):
+    """No network. Records which snapshots were asked for.
+
+    Stubs are built from the real source table rather than a hand-written list,
+    so adding an updater is covered by these tests instead of silently skipped.
+    """
     called = []
 
     def make(name, result=None):
@@ -32,17 +42,17 @@ def stub_updaters(monkeypatch):
     monkeypatch.setattr(
         update_cli,
         "UPDATE_FUNCTIONS",
-        {name: make(name) for name in ["attack", "kev", "lolbas"]},
+        {name: make(name) for name in real_sources},
     )
     return called
 
 
-def test_all_refreshes_every_snapshot(stub_updaters) -> None:
+def test_all_refreshes_every_snapshot(stub_updaters, real_sources) -> None:
     result = update_cli.knowledge_update("all")
 
     assert result["ok"] is True
-    assert stub_updaters == ["attack", "kev", "lolbas"]
-    assert result["data"]["updated_source_count"] == 3
+    assert stub_updaters == real_sources
+    assert result["data"]["updated_source_count"] == len(real_sources)
     assert result["data"]["failed_sources"] == []
 
 

@@ -2,7 +2,8 @@ import json
 import tomllib
 from pathlib import Path
 
-from threatsyft import config
+from threatsyft import config, update_cli
+from threatsyft.knowledge.freshness import SNAPSHOTS
 
 
 def test_pyproject_exposes_console_scripts() -> None:
@@ -36,15 +37,24 @@ def test_mcp_example_configs_are_valid_json() -> None:
         }
 
 
-def test_setup_command_names_a_console_script_that_exists() -> None:
-    """The command told to a user with a missing snapshot must be one they can run.
+def test_setup_command_is_one_a_user_can_actually_run() -> None:
+    """The command told to a user with a missing snapshot must work, both halves of it.
 
-    Asserted against pyproject rather than against a literal string, so renaming
-    a console script fails here instead of silently misdirecting a user.
+    Asserted against pyproject and against the updater's own source table rather
+    than against a literal string. The last time this broke it was the argument,
+    not the executable: the message named a retired CLI and five tests stayed
+    green because each one asserted the same literal the code produced.
     """
     data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     scripts = set(data["project"]["scripts"])
 
-    for source in ["attack", "kev", "lolbas"]:
-        command = config.knowledge_update_command(source)
-        assert command.split()[0] in scripts, command
+    for source in update_cli.UPDATE_FUNCTIONS:
+        executable, argument = config.knowledge_update_command(source).split()
+
+        assert executable in scripts, f"{executable} is not a console script"
+        assert argument in update_cli.UPDATE_FUNCTIONS, f"{argument} is not an updater source"
+
+
+def test_every_snapshot_the_tools_read_has_an_updater() -> None:
+    """A snapshot with no refresh command is a dead end for whoever hits it."""
+    assert set(SNAPSHOTS) <= set(update_cli.UPDATE_FUNCTIONS)
