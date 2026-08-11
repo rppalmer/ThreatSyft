@@ -37,6 +37,14 @@ class JsonResult:
     error: dict[str, Any] | None
 
 
+@dataclass(frozen=True)
+class JsonArrayResult:
+    """A parsed JSON array or a ready-to-return error envelope, never both."""
+
+    payload: list[Any] | None
+    error: dict[str, Any] | None
+
+
 def guarded_get(
     tool: str,
     query: dict[str, Any],
@@ -144,3 +152,49 @@ def parse_json_object(
             ),
         )
     return JsonResult(payload, None)
+
+
+def parse_json_array(
+    tool: str,
+    query: dict[str, Any],
+    provider: str,
+    response: httpx.Response,
+) -> JsonArrayResult:
+    """Raise-for-status, parse JSON, and require a top-level array.
+
+    The sibling of ``parse_json_object`` for providers that return a bare list at
+    the top level, which that function rejects. Same status and parse mapping, so
+    an array-returning provider produces the same error codes as every other one.
+    """
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        return JsonArrayResult(
+            None,
+            error_response(
+                tool,
+                query,
+                "upstream_error",
+                f"{provider} returned an unexpected error.",
+                {"status_code": exc.response.status_code},
+            ),
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        return JsonArrayResult(
+            None,
+            error_response(
+                tool, query, "parse_error", f"{provider} response was not JSON.", str(exc)
+            ),
+        )
+
+    if not isinstance(payload, list):
+        return JsonArrayResult(
+            None,
+            error_response(
+                tool, query, "parse_error", f"{provider} response was not a JSON array."
+            ),
+        )
+    return JsonArrayResult(payload, None)

@@ -35,6 +35,14 @@ SECRET_QUERY_PARAMS = ("key", "apikey", "api_key", "token", "auth", "password")
 # The library namespaces that log request URLs.
 URL_LOGGER_PREFIXES = ("httpx", "httpcore")
 
+# Namespaces that are merely noisy. The MCP SDK logs a line per request at INFO,
+# and FastMCP routes it to stderr through a rich handler. A stdio host reads
+# stdout for the protocol and shows stderr to the user, so on an interactive
+# host that lands in the middle of whatever the user is looking at. Separate
+# from URL_LOGGER_PREFIXES because this is volume, not credential exposure: no
+# redaction filter is wanted here, only a level.
+NOISY_LOGGER_PREFIXES = ("mcp.server",)
+
 _SECRET_PATTERN = re.compile(
     r"(?i)\b(" + "|".join(SECRET_QUERY_PARAMS) + r")=([^&\s\"'<>]+)",
 )
@@ -75,12 +83,16 @@ def redact(value: str) -> str:
 
 
 def configure_logging() -> None:
-    """Silence request-level HTTP logging and redact secrets from what remains.
+    """Silence request-level HTTP and MCP logging, and redact what remains.
 
     Called from every entry point. Cheap and idempotent, so calling it twice is
     harmless.
+
+    The levels are set on the library loggers themselves rather than on root,
+    because FastMCP calls ``logging.basicConfig`` and owns root's level and
+    handler; a level set there is whatever FastMCP last decided it should be.
     """
-    for name in URL_LOGGER_PREFIXES:
+    for name in URL_LOGGER_PREFIXES + NOISY_LOGGER_PREFIXES:
         logging.getLogger(name).setLevel(logging.WARNING)
 
     for logger in _url_loggers():

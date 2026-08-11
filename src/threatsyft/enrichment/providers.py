@@ -18,7 +18,17 @@ PROVIDERS: dict[str, list[str]] = {
     "virustotal": ["VIRUSTOTAL_API_KEY"],
     "securitytrails": ["SECURITYTRAILS_API_KEY"],
     "shodan": ["SHODAN_API_KEY"],
-    "ipgeolocation": ["IPGEOLOCATION_API_KEY"],
     "alienvault": ["ALIENVAULT_API_KEY"],
     "google_safebrowsing": ["GOOGLE_SAFEBROWSING_API_KEY"],
+    "sentinel": ["SENTINEL_API_KEY"],
+    "censys": ["CENSYS_API_KEY"],
+    "urlscan": ["URLSCAN_API_KEY"],
+    "hybrid_analysis": ["HYBRID_ANALYSIS_API_KEY"],
 }
+
+# Providers that still answer without their key, at a reduced quota. Listing
+# them keeps ``enrichment_status`` from reporting an unkeyed urlscan the same
+# way it reports an unkeyed Shodan: one is a smaller rate limit, the other is a
+# source that cannot run at all, and a caller deciding what to trust needs the
+# difference.
+OPTIONAL_KEY_PROVIDERS = {"urlscan"}

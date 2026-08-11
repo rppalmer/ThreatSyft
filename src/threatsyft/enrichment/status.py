@@ -7,7 +7,7 @@ from typing import Any
 from threatsyft.config import get_api_key
 from threatsyft.enrichment.enrich import DISPATCH
 from threatsyft.enrichment.models import success_response
-from threatsyft.enrichment.providers import PROVIDERS
+from threatsyft.enrichment.providers import OPTIONAL_KEY_PROVIDERS, PROVIDERS
 
 TOOL_NAME = "enrichment_status"
 
@@ -17,6 +17,13 @@ KEYLESS_SOURCES = {
     "dns": "DNS records for a domain.",
     "rdap": "RDAP registration data for a domain or IP.",
     "whois": "WHOIS registration data for a domain or IP.",
+    # Keyless at lookup time, which is what this map is about. Downloading the
+    # database does need MaxMind credentials, and that is an update-time
+    # concern reported by the update command rather than a provider key.
+    "maxmind": (
+        "GeoLite2 geolocation and ASN, read from a local database. "
+        "Run `threatsyft-update maxmind` to download it."
+    ),
 }
 
 ALL_API_KEYS = sorted({name for keys in PROVIDERS.values() for name in keys})
@@ -27,7 +34,13 @@ def enrichment_status() -> dict[str, Any]:
     providers = {
         provider: {
             "api_keys": {name: get_api_key(name) is not None for name in api_keys},
+            # "configured" means every key this provider needs is present.
+            # A provider whose key is optional is usable either way, so it
+            # reports both: the key state, and that the key is not required.
             "configured": all(get_api_key(name) is not None for name in api_keys),
+            "key_optional": provider in OPTIONAL_KEY_PROVIDERS,
+            "usable": provider in OPTIONAL_KEY_PROVIDERS
+            or all(get_api_key(name) is not None for name in api_keys),
             "indicator_types": _indicator_types(provider),
         }
         for provider, api_keys in PROVIDERS.items()

@@ -23,9 +23,16 @@ DEFAULT_GREYNOISE_BASE_URL = "https://api.greynoise.io/v3/community"
 DEFAULT_VIRUSTOTAL_BASE_URL = "https://www.virustotal.com/api/v3"
 DEFAULT_SHODAN_BASE_URL = "https://api.shodan.io"
 DEFAULT_SECURITYTRAILS_BASE_URL = "https://api.securitytrails.com/v1"
-DEFAULT_IPGEOLOCATION_BASE_URL = "https://api.ipgeolocation.io"
 DEFAULT_ALIENVAULT_BASE_URL = "https://otx.alienvault.com/api/v1"
 DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL = "https://safebrowsing.googleapis.com"
+DEFAULT_SENTINEL_BASE_URL = "https://maskbreak.com/v1"
+DEFAULT_CENSYS_BASE_URL = "https://api.platform.censys.io/v3"
+DEFAULT_URLSCAN_BASE_URL = "https://urlscan.io/api/v1"
+DEFAULT_HYBRID_ANALYSIS_BASE_URL = "https://www.hybrid-analysis.com/api/v2"
+# The current download host. The older
+# download.maxmind.com/app/geoip_download?license_key=... endpoint is deprecated
+# and now fails; this one takes the account ID and license key as basic auth.
+DEFAULT_MAXMIND_BASE_URL = "https://download.maxmind.com/geoip/databases"
 
 
 def _load_environment() -> None:
@@ -154,6 +161,16 @@ def get_greynoise_base_url() -> str:
     return _setting("THREATSYFT_GREYNOISE_BASE_URL", DEFAULT_GREYNOISE_BASE_URL).rstrip("/")
 
 
+def get_censys_base_url() -> str:
+    """Return the Censys Platform API base URL."""
+    return _setting("THREATSYFT_CENSYS_BASE_URL", DEFAULT_CENSYS_BASE_URL).rstrip("/")
+
+
+def get_sentinel_base_url() -> str:
+    """Return the Sentinel API base URL."""
+    return _setting("THREATSYFT_SENTINEL_BASE_URL", DEFAULT_SENTINEL_BASE_URL).rstrip("/")
+
+
 def get_virustotal_base_url() -> str:
     """Return the VirusTotal API base URL."""
     return _setting("THREATSYFT_VIRUSTOTAL_BASE_URL", DEFAULT_VIRUSTOTAL_BASE_URL).rstrip("/")
@@ -171,11 +188,6 @@ def get_securitytrails_base_url() -> str:
     )
 
 
-def get_ipgeolocation_base_url() -> str:
-    """Return the IPGeolocation.io API base URL."""
-    return _setting("THREATSYFT_IPGEOLOCATION_BASE_URL", DEFAULT_IPGEOLOCATION_BASE_URL).rstrip("/")
-
-
 def get_alienvault_base_url() -> str:
     """Return the AlienVault OTX API base URL."""
     return _setting("THREATSYFT_ALIENVAULT_BASE_URL", DEFAULT_ALIENVAULT_BASE_URL).rstrip("/")
@@ -186,6 +198,38 @@ def get_google_safebrowsing_base_url() -> str:
     return _setting(
         "THREATSYFT_GOOGLE_SAFEBROWSING_BASE_URL", DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL
     ).rstrip("/")
+
+
+def get_urlscan_base_url() -> str:
+    """Return the urlscan.io API base URL."""
+    return _setting("THREATSYFT_URLSCAN_BASE_URL", DEFAULT_URLSCAN_BASE_URL).rstrip("/")
+
+
+def get_hybrid_analysis_base_url() -> str:
+    """Return the Hybrid Analysis (Falcon Sandbox) API base URL."""
+    return _setting("THREATSYFT_HYBRID_ANALYSIS_BASE_URL", DEFAULT_HYBRID_ANALYSIS_BASE_URL).rstrip(
+        "/"
+    )
+
+
+def get_maxmind_base_url() -> str:
+    """Return the MaxMind database download base URL."""
+    return _setting("THREATSYFT_MAXMIND_BASE_URL", DEFAULT_MAXMIND_BASE_URL).rstrip("/")
+
+
+def get_maxmind_city_path() -> Path:
+    """Return the local GeoLite2 City database path."""
+    return _knowledge_path("THREATSYFT_MAXMIND_CITY_PATH", "maxmind", "GeoLite2-City.mmdb")
+
+
+def get_maxmind_asn_path() -> Path:
+    """Return the local GeoLite2 ASN database path."""
+    return _knowledge_path("THREATSYFT_MAXMIND_ASN_PATH", "maxmind", "GeoLite2-ASN.mmdb")
+
+
+def get_maxmind_account_id() -> str | None:
+    """Return the MaxMind account ID used as the basic-auth username."""
+    return get_api_key("MAXMIND_ACCOUNT_ID")
 
 
 def knowledge_update_command(source: str) -> str:

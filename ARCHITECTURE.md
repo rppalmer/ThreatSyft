@@ -15,7 +15,7 @@ threatsyft-knowledge    no keys, no metered calls
 |---|---|---|
 | enrichment | `enrich(indicator)` | Classify an IP, domain, URL or file hash and fan out concurrently to every source supporting that type. |
 | enrichment | `enrichment_status()` | Which API keys are present. No secret values, no network. |
-| knowledge | `lookup(reference)` | Classify a CVE, ATT&CK technique, tactic, mitigation, threat actor or LOLBAS name and collect every source covering it. |
+| knowledge | `lookup(reference)` | Classify a CVE, ATT&CK technique, tactic, mitigation, threat actor, software or LOLBAS name and collect every source covering it. |
 | knowledge | `search(query, source, limit)` | Keyword search across ATT&CK techniques, threat actors, KEV and LOLBAS, grouped by source. |
 | knowledge | `extract_iocs(text)` | Typed IOC candidates from text the caller already has. No network. |
 | knowledge | `knowledge_status()` | Snapshot readiness. |
@@ -67,6 +67,8 @@ All three collection tools return results the same way, so a caller written agai
 Every entry has the same shape whether it succeeded or not, so a consumer iterates one structure instead of correlating a results map against an errors list. `source_summary` lets a node answer "did anything work?" without iterating. The type is echoed back so an agent that guessed wrong can self-correct. Source ordering is fixed and independent of which source answers first.
 
 One vocabulary too, not just one shape. The ATT&CK technique catalog is `attack_technique` in a `lookup` response, in a `search` response and in `search`'s `source` argument; the same holds for `attack_actor`. A shared shape with two names for the same catalog would still make a caller translate.
+
+ATT&CK software is `attack_software`, reachable by S-id. Malware and tooling are two STIX types sharing one S-numbering space, so they are one catalog here for the reason ATT&CK numbers them together: a caller asking what a group uses wants both. `software_type` preserves which one each entry is rather than flattening the distinction away. An actor record carries `software`/`software_count` in the same trimmed identity shape as `techniques`, and the edge reads from either end — a software lookup lists the actors recorded as using it.
 
 A source that raises rather than returning an envelope becomes that source's `unexpected_error` entry. Letting it propagate would return no envelope at all and discard what every other source had already found, which is the opposite of what the shape promises.
 

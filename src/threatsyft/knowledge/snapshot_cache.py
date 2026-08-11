@@ -55,6 +55,21 @@ def write_snapshot(path: Path, payload: Any) -> None:
     os.replace(temporary_path, path)
 
 
+def write_binary_snapshot(path: Path, payload: bytes) -> None:
+    """Write a binary snapshot atomically, with the same guarantee as ``write_snapshot``.
+
+    The MaxMind databases are ``.mmdb`` binary search tries rather than JSON, so
+    they cannot go through ``write_snapshot``. The reason for the temporary file
+    and rename is identical and matters more here: a truncated ``.mmdb`` is not a
+    parse error the reader reports cleanly, and the City database is large enough
+    that an interrupted write is a realistic outcome rather than a theoretical one.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary_path = path.with_name(f"{path.name}.tmp")
+    temporary_path.write_bytes(payload)
+    os.replace(temporary_path, path)
+
+
 def load_cached[T](cache: dict[str, tuple[float, T]], path: Path, parse: Callable[[], T]) -> T:
     """Return a parsed snapshot, reusing a cached parse when the file is unchanged.
 

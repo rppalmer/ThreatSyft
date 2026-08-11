@@ -11,16 +11,18 @@ EXPECTED_DISPATCH = {
     "ip": [
         "abuseipdb",
         "greynoise",
+        "sentinel",
         "virustotal",
         "shodan",
-        "ipgeolocation",
+        "censys",
+        "maxmind",
         "alienvault",
         "rdap",
         "whois",
     ],
     "domain": ["dns", "rdap", "whois", "virustotal", "securitytrails", "alienvault"],
-    "url": ["google_safebrowsing", "virustotal", "alienvault"],
-    "hash": ["virustotal", "alienvault"],
+    "url": ["google_safebrowsing", "virustotal", "urlscan", "alienvault"],
+    "hash": ["virustotal", "hybrid_analysis", "alienvault"],
 }
 
 

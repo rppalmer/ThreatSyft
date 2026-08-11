@@ -59,7 +59,7 @@ def test_blank_env_override_falls_back_for_every_url_setting(monkeypatch) -> Non
         "THREATSYFT_VIRUSTOTAL_BASE_URL": config.get_virustotal_base_url,
         "THREATSYFT_SHODAN_BASE_URL": config.get_shodan_base_url,
         "THREATSYFT_SECURITYTRAILS_BASE_URL": config.get_securitytrails_base_url,
-        "THREATSYFT_IPGEOLOCATION_BASE_URL": config.get_ipgeolocation_base_url,
+        "THREATSYFT_MAXMIND_BASE_URL": config.get_maxmind_base_url,
         "THREATSYFT_ALIENVAULT_BASE_URL": config.get_alienvault_base_url,
         "THREATSYFT_GOOGLE_SAFEBROWSING_BASE_URL": config.get_google_safebrowsing_base_url,
     }

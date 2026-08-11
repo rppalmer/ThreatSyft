@@ -195,6 +195,60 @@
       "relationship_type": "uses",
       "source_ref": "intrusion-set--00000000-0000-4000-8000-00000000f001",
       "target_ref": "attack-pattern--command"
+    },
+    {
+      "type": "malware",
+      "id": "malware--00000000-0000-4000-8000-00000000f101",
+      "name": "FixtureRAT",
+      "description": "Fixture malware used by Fixture Bear.",
+      "x_mitre_aliases": [
+        "FixtureRAT",
+        "FIXRAT"
+      ],
+      "x_mitre_platforms": [
+        "Windows"
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "S9001",
+          "url": "https://attack.mitre.org/software/S9001"
+        }
+      ]
+    },
+    {
+      "type": "tool",
+      "id": "tool--00000000-0000-4000-8000-00000000f102",
+      "name": "FixtureDump",
+      "description": "Fixture dual-use tool.",
+      "x_mitre_aliases": [
+        "FixtureDump"
+      ],
+      "x_mitre_platforms": [
+        "Windows",
+        "Linux"
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "S9002",
+          "url": "https://attack.mitre.org/software/S9002"
+        }
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--f201",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--00000000-0000-4000-8000-00000000f001",
+      "target_ref": "malware--00000000-0000-4000-8000-00000000f101"
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--f202",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--00000000-0000-4000-8000-00000000f001",
+      "target_ref": "tool--00000000-0000-4000-8000-00000000f102"
     }
   ]
 }

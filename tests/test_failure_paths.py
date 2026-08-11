@@ -213,7 +213,6 @@ def test_no_api_key_value_appears_in_any_tool_response(monkeypatch) -> None:
         "virustotal",
         "securitytrails",
         "shodan",
-        "ipgeolocation",
         "alienvault",
         "safebrowsing",
     ]:

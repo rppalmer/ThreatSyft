@@ -15,9 +15,11 @@ from typing import Any
 from threatsyft.core import build_sources
 from threatsyft.enrichment.abuseipdb import abuseipdb_check_ip
 from threatsyft.enrichment.alienvault import alienvault_indicator_lookup
+from threatsyft.enrichment.censys import censys_host_lookup
 from threatsyft.enrichment.dns import dns_lookup
 from threatsyft.enrichment.greynoise import greynoise_ip_context
-from threatsyft.enrichment.ipgeolocation import ipgeolocation_lookup
+from threatsyft.enrichment.hybrid_analysis import hybrid_analysis_hash_lookup
+from threatsyft.enrichment.maxmind import maxmind_ip_lookup
 from threatsyft.enrichment.models import (
     InputValidationError,
     classify_indicator,
@@ -27,7 +29,9 @@ from threatsyft.enrichment.models import (
 from threatsyft.enrichment.rdap import rdap_lookup
 from threatsyft.enrichment.safebrowsing import google_safebrowsing_check_url
 from threatsyft.enrichment.securitytrails import securitytrails_domain_lookup
+from threatsyft.enrichment.sentinel import sentinel_ip_lookup
 from threatsyft.enrichment.shodan import shodan_host_lookup
+from threatsyft.enrichment.urlscan import urlscan_search
 from threatsyft.enrichment.virustotal import (
     virustotal_domain_report,
     virustotal_file_report,
@@ -49,9 +53,11 @@ DISPATCH: dict[str, tuple[SourceFunction, ...]] = {
     "ip": (
         ("abuseipdb", abuseipdb_check_ip),
         ("greynoise", greynoise_ip_context),
+        ("sentinel", sentinel_ip_lookup),
         ("virustotal", virustotal_ip_report),
         ("shodan", shodan_host_lookup),
-        ("ipgeolocation", ipgeolocation_lookup),
+        ("censys", censys_host_lookup),
+        ("maxmind", maxmind_ip_lookup),
         ("alienvault", alienvault_indicator_lookup),
         ("rdap", rdap_lookup),
         ("whois", whois_lookup),
@@ -67,10 +73,12 @@ DISPATCH: dict[str, tuple[SourceFunction, ...]] = {
     "url": (
         ("google_safebrowsing", google_safebrowsing_check_url),
         ("virustotal", virustotal_url_report),
+        ("urlscan", urlscan_search),
         ("alienvault", alienvault_indicator_lookup),
     ),
     "hash": (
         ("virustotal", virustotal_file_report),
+        ("hybrid_analysis", hybrid_analysis_hash_lookup),
         ("alienvault", alienvault_indicator_lookup),
     ),
 }

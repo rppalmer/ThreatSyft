@@ -22,6 +22,7 @@ from threatsyft.knowledge.attack import (
     attack_actor_lookup,
     attack_actor_search,
     attack_mitigation_lookup,
+    attack_software_lookup,
     attack_tactic_lookup,
     attack_technique_lookup,
     normalize_technique_id,
@@ -42,6 +43,7 @@ TECHNIQUE_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
 TACTIC_PATTERN = re.compile(r"^TA\d{4}$", re.IGNORECASE)
 MITIGATION_PATTERN = re.compile(r"^M\d{4}$", re.IGNORECASE)
 ACTOR_PATTERN = re.compile(r"^G\d{4}$", re.IGNORECASE)
+SOFTWARE_PATTERN = re.compile(r"^S\d{4}$", re.IGNORECASE)
 
 # How many LOLBAS hits to attach when looking up an ATT&CK technique. This is a
 # supporting cross-reference, not the answer, so it stays small.
@@ -96,6 +98,12 @@ REFERENCE_TYPES: tuple[ReferenceType, ...] = (
         ACTOR_PATTERN,
         str.upper,
         (("attack_actor", attack_actor_lookup),),
+    ),
+    ReferenceType(
+        "attack_software",
+        SOFTWARE_PATTERN,
+        str.upper,
+        (("attack_software", attack_software_lookup),),
     ),
     ReferenceType(
         "attack_technique",

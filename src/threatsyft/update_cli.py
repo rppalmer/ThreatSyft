@@ -17,6 +17,7 @@ from threatsyft.core import error_response, success_response
 from threatsyft.knowledge.update_attack import update_attack_snapshot
 from threatsyft.knowledge.update_kev import update_kev_snapshot
 from threatsyft.knowledge.update_lolbas import update_lolbas_snapshot
+from threatsyft.knowledge.update_maxmind import update_maxmind_snapshot
 from threatsyft.logging_setup import configure_logging
 
 TOOL_NAME = "knowledge_update"
@@ -27,6 +28,11 @@ UPDATE_FUNCTIONS: dict[str, UpdateFunction] = {
     "attack": update_attack_snapshot,
     "kev": update_kev_snapshot,
     "lolbas": update_lolbas_snapshot,
+    # An enrichment snapshot rather than a reference catalog, and the only one
+    # here that needs credentials to download. It lives on this command anyway
+    # because this is the project's only snapshot downloader, and splitting out
+    # a second CLI for one source would be worse than the naming stretch.
+    "maxmind": update_maxmind_snapshot,
 }
 
 
@@ -61,7 +67,7 @@ def knowledge_update(source: str) -> dict[str, Any]:
             TOOL_NAME,
             query,
             "invalid_input",
-            "Knowledge update source must be attack, kev, lolbas, or all.",
+            "Knowledge update source must be attack, kev, lolbas, maxmind, or all.",
         )
 
     results: dict[str, dict[str, Any]] = {}

@@ -150,3 +150,21 @@ def test_the_filter_leaves_a_clean_record_untouched() -> None:
     RedactSecretsFilter().filter(record)
 
     assert record.args == ("https://rdap.org",), "an unchanged record keeps its lazy formatting"
+
+
+def test_configure_logging_quietens_mcp_request_logging() -> None:
+    """The SDK logs a line per request; a stdio host shows that to the user."""
+    logging.getLogger("mcp.server").setLevel(logging.NOTSET)
+
+    configure_logging()
+
+    assert logging.getLogger("mcp.server").level == logging.WARNING
+    assert logging.getLogger("mcp.server.lowlevel.server").getEffectiveLevel() == (logging.WARNING)
+
+
+def test_mcp_quietening_adds_no_redaction_filter() -> None:
+    """Volume and credential exposure are separate concerns with separate lists."""
+    configure_logging()
+
+    filters = logging.getLogger("mcp.server").filters
+    assert not any(isinstance(f, RedactSecretsFilter) for f in filters)

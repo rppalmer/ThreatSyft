@@ -39,13 +39,25 @@ mcp = FastMCP(
 # NVD as well as the local KEV catalog.
 @mcp.tool(annotations=LIVE_NETWORK)
 def lookup(reference: str) -> dict[str, Any]:
-    """Collect every local source covering one CVE, ATT&CK technique, or LOLBAS name."""
+    """Collect every local source covering one reference.
+
+    Accepts a CVE (CVE-2024-3400), an ATT&CK technique (T1059.001), tactic
+    (TA0002), mitigation (M1038), group (G0016) or software (S0002), or a bare
+    name such as a LOLBAS binary or a threat actor alias like "Cozy Bear".
+    A group lists the techniques and the malware and tooling attributed to it;
+    software lists the groups recorded using it.
+    """
     return run_lookup(reference)
 
 
 @mcp.tool(annotations=LOCAL_ONLY)
 def search(query: str, source: str = "all", limit: int = 10) -> dict[str, Any]:
-    """Search ATT&CK, KEV, and LOLBAS, grouped by source. limit applies per source."""
+    """Search ATT&CK techniques and groups, KEV, and LOLBAS, grouped by source.
+
+    Matches terms literally rather than by meaning, so a whole question returns
+    nothing: search one canonical term such as "credential dumping", "T1055" or
+    "certutil.exe". limit applies per source.
+    """
     return run_search(query, source, limit)
 
 

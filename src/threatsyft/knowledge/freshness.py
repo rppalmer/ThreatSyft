@@ -43,6 +43,7 @@ SOURCE_SNAPSHOTS = {
     "attack_tactic": "attack",
     "attack_mitigation": "attack",
     "attack_actor": "attack",
+    "attack_software": "attack",
 }
 
 STALE_AFTER_DAYS = {source: SNAPSHOTS[snapshot][1] for source, snapshot in SOURCE_SNAPSHOTS.items()}

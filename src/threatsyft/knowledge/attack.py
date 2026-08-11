@@ -19,6 +19,7 @@ from threatsyft.knowledge.snapshot_cache import load_cached
 TECHNIQUE_ID_PATTERN = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
 MITIGATION_ID_PATTERN = re.compile(r"^M\d{4}$", re.IGNORECASE)
 ACTOR_ID_PATTERN = re.compile(r"^G\d{4}$", re.IGNORECASE)
+SOFTWARE_ID_PATTERN = re.compile(r"^S\d{4}$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,28 @@ class Actor:
     description: str | None
     source_url: str | None
     technique_ids: list[str] = field(default_factory=list)
+    software_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Software:
+    """Compact ATT&CK software (malware or tool) metadata.
+
+    ATT&CK models malware and tooling as two STIX types that share one S####
+    numbering space. They are kept together here for the same reason ATT&CK
+    numbers them together: a caller asking what a group uses wants both, and
+    `software_type` preserves which one each entry is.
+    """
+
+    stix_id: str
+    software_id: str
+    name: str
+    software_type: str
+    aliases: list[str]
+    platforms: list[str]
+    description: str | None
+    source_url: str | None
+    actor_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -80,6 +103,7 @@ class AttackKnowledge:
     mitigations_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
     actors_by_id: dict[str, Actor] = field(default_factory=dict)
     actors_by_alias: dict[str, Actor] = field(default_factory=dict)
+    software_by_id: dict[str, Software] = field(default_factory=dict)
 
 
 def attack_technique_lookup(technique_id: str) -> dict[str, Any]:
@@ -272,6 +296,54 @@ def attack_actor_lookup(actor: str) -> dict[str, Any]:
                 for technique_id in found.technique_ids
                 if technique_id in knowledge.techniques_by_id
             ],
+            "software_count": len(found.software_ids),
+            "software": [
+                _software_ref(knowledge.software_by_id[software_id])
+                for software_id in found.software_ids
+                if software_id in knowledge.software_by_id
+            ],
+            "snapshot_path": str(knowledge.path),
+        },
+    )
+
+
+def attack_software_lookup(software: str) -> dict[str, Any]:
+    """Look up one ATT&CK software (malware or tool) by S-id."""
+    query = {"software": software}
+
+    try:
+        software_id = normalize_software_id(software)
+        knowledge = load_attack_knowledge()
+    except InputValidationError as exc:
+        return error_response("attack_software_lookup", query, "invalid_input", str(exc))
+    except KnowledgeLoadError as exc:
+        return exc.to_response("attack_software_lookup", query)
+
+    found = knowledge.software_by_id.get(software_id)
+    if found is None:
+        return error_response(
+            "attack_software_lookup",
+            query,
+            "not_found",
+            f"ATT&CK software {software!r} was not found in the local snapshot.",
+        )
+
+    query["software"] = found.software_id
+    return success_response(
+        "attack_software_lookup",
+        query,
+        {
+            **_software_ref(found),
+            "aliases": found.aliases,
+            "platforms": found.platforms,
+            "description": found.description,
+            "actor_count": len(found.actor_ids),
+            # Identity only, like every other list; call lookup on any id.
+            "actors": [
+                _actor_summary(knowledge.actors_by_id[actor_id])
+                for actor_id in found.actor_ids
+                if actor_id in knowledge.actors_by_id
+            ],
             "snapshot_path": str(knowledge.path),
         },
     )
@@ -316,6 +388,16 @@ def normalize_actor_id(value: str) -> str:
     if not ACTOR_ID_PATTERN.fullmatch(actor_id):
         raise InputValidationError("Threat actor ID must look like G0016.")
     return actor_id
+
+
+def normalize_software_id(value: str) -> str:
+    """Return a canonical ATT&CK software ID such as S0002."""
+    software_id = value.strip().upper()
+    if not software_id:
+        raise InputValidationError("Software ID must not be empty.")
+    if not SOFTWARE_ID_PATTERN.fullmatch(software_id):
+        raise InputValidationError("Software ID must look like S0002.")
+    return software_id
 
 
 def normalize_mitigation_id(value: str) -> str:
@@ -401,6 +483,7 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
     techniques_by_stix_id: dict[str, Technique] = {}
     mitigations_by_stix_id: dict[str, dict[str, Any]] = {}
     actors_by_stix_id: dict[str, Actor] = {}
+    software_by_stix_id: dict[str, Software] = {}
     relationships: list[dict[str, Any]] = []
 
     for item in objects:
@@ -433,6 +516,12 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
                 actors_by_stix_id[actor.stix_id] = actor
             continue
 
+        if item_type in ("malware", "tool"):
+            software = _parse_software(item, item_type)
+            if software is not None:
+                software_by_stix_id[software.stix_id] = software
+            continue
+
         if item_type == "course-of-action":
             mitigation = _parse_mitigation(item)
             stix_id = _clean_optional_string(item.get("id"))
@@ -445,6 +534,7 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
 
     _apply_relationships(relationships, techniques_by_stix_id, mitigations_by_stix_id)
     _apply_actor_relationships(relationships, techniques_by_stix_id, actors_by_stix_id)
+    _apply_software_relationships(relationships, software_by_stix_id, actors_by_stix_id)
 
     actors_by_alias: dict[str, Actor] = {}
     for actor in actors_by_stix_id.values():
@@ -467,6 +557,9 @@ def _parse_attack_bundle(objects: list[Any], path: Path) -> AttackKnowledge:
         },
         actors_by_id={actor.actor_id: actor for actor in actors_by_stix_id.values()},
         actors_by_alias=actors_by_alias,
+        software_by_id={
+            software.software_id: software for software in software_by_stix_id.values()
+        },
     )
 
 
@@ -550,6 +643,56 @@ def _apply_actor_relationships(
 
     for actor in actors_by_stix_id.values():
         actor.technique_ids = sorted(set(actor.technique_ids))
+
+
+def _apply_software_relationships(
+    relationships: list[dict[str, Any]],
+    software_by_stix_id: dict[str, Software],
+    actors_by_stix_id: dict[str, Actor],
+) -> None:
+    """Attach the malware and tooling each actor is recorded as using.
+
+    ATT&CK expresses this as the same `uses` relationship that links an actor to
+    a technique, distinguished only by what the target resolves to, so the two
+    passes read the same edges and each keeps the ones it recognises.
+    """
+    for relationship in relationships:
+        if relationship.get("relationship_type") != "uses":
+            continue
+        actor = actors_by_stix_id.get(_clean_optional_string(relationship.get("source_ref")) or "")
+        software = software_by_stix_id.get(
+            _clean_optional_string(relationship.get("target_ref")) or ""
+        )
+        if actor is not None and software is not None:
+            actor.software_ids.append(software.software_id)
+            software.actor_ids.append(actor.actor_id)
+
+    for actor in actors_by_stix_id.values():
+        actor.software_ids = sorted(set(actor.software_ids))
+    for software in software_by_stix_id.values():
+        software.actor_ids = sorted(set(software.actor_ids))
+
+
+def _parse_software(item: dict[str, Any], item_type: str) -> Software | None:
+    software_id, source_url = _mitre_external_reference(item.get("external_references", []))
+    name = _clean_optional_string(item.get("name"))
+    stix_id = _clean_optional_string(item.get("id"))
+    if software_id is None or name is None or stix_id is None:
+        return None
+    return Software(
+        stix_id=stix_id,
+        software_id=software_id,
+        name=name,
+        software_type=item_type,
+        aliases=[
+            alias
+            for alias in _string_list(item.get("x_mitre_aliases"))
+            if alias.casefold() != name.casefold()
+        ],
+        platforms=_string_list(item.get("x_mitre_platforms")),
+        description=_clean_optional_string(item.get("description")),
+        source_url=source_url,
+    )
 
 
 def _parse_mitigation(item: dict[str, Any]) -> dict[str, Any] | None:
@@ -797,6 +940,15 @@ def _actor_summary(actor: Actor) -> dict[str, Any]:
         "name": actor.name,
         "aliases": actor.aliases,
         "source_url": actor.source_url,
+    }
+
+
+def _software_ref(software: Software) -> dict[str, Any]:
+    return {
+        "software_id": software.software_id,
+        "name": software.name,
+        "software_type": software.software_type,
+        "source_url": software.source_url,
     }
 
 

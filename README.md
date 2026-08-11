@@ -13,21 +13,32 @@ ThreatSyft helps enrich IP addresses, domains, URLs, and file hashes with common
 - DNS records for a domain
 - RDAP registration data for a domain or IP address
 - WHOIS information for a domain or IP address
-- IP geolocation details
+- IP geolocation and ASN from a local MaxMind GeoLite2 database, with the build
+  date and age of that database on every answer
 - AbuseIPDB IP reputation
 - GreyNoise IP context
+- Sentinel anonymization context: VPN, proxy, Tor, and datacenter signals, with
+  the network the address belongs to
 - VirusTotal IP reports
 - VirusTotal domain reports
 - VirusTotal URL reports
 - VirusTotal file hash reports
 - SecurityTrails domain intelligence
 - Shodan passive host information
+- Censys host detail: observed services with the software behind each open port
 - AlienVault OTX indicator context
 - Google Safe Browsing URL checks
+- urlscan.io scan history: where a URL finally lands after redirects, the page
+  title, and the host that served it. Reads existing scans; never submits one
+- Hybrid Analysis sandbox reports for a file hash: what the sample did when it
+  ran, including the ATT&CK technique IDs the behaviour mapped to, which
+  `lookup` then resolves locally. Reads existing reports; never detonates
 - Single-call enrichment across every source supporting an indicator type
 - Local MITRE ATT&CK Enterprise technique lookup
 - Local MITRE ATT&CK Enterprise technique search
 - Local MITRE ATT&CK Enterprise tactic lookup
+- Local MITRE ATT&CK Enterprise software lookup, listing the actors that use it
+- Threat actor records listing the malware and tooling ATT&CK records them using
 - Targeted NVD CVE lookups
 - Single-call reference lookup across ATT&CK, KEV, LOLBAS, and NVD
 - Grouped search across ATT&CK, KEV, and LOLBAS
@@ -133,7 +144,10 @@ Collects every local source covering one reference, in a single call. Accepts:
 - an ATT&CK technique id such as `T1059` or `T1059.001`, which asks ATT&CK and searches LOLBAS
 - an ATT&CK tactic id such as `TA0002`
 - an ATT&CK mitigation id such as `M1038`
-- an ATT&CK group id such as `G0016`
+- an ATT&CK group id such as `G0016`, whose record lists the techniques and the
+  malware and tooling that group is recorded using
+- an ATT&CK software id such as `S0002`, which resolves the malware or tool and
+  the groups recorded using it
 - a bare name such as `Certutil.exe`, `execution`, `APT29` or `Cozy Bear`
 
 A bare name is ambiguous: it could be a LOLBAS binary, a tactic, or a threat actor or one of its aliases. Rather than guess, `lookup` asks all three. They are local and fast, and the `sources` map shows which one answered.
@@ -183,12 +197,14 @@ Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values 
 │       │   ├── alienvault.py
 │       │   ├── dns.py
 │       │   ├── greynoise.py
-│       │   ├── ipgeolocation.py
+│       │   ├── hybrid_analysis.py
+│       │   ├── maxmind.py
 │       │   ├── models.py
 │       │   ├── rdap.py
 │       │   ├── safebrowsing.py
 │       │   ├── securitytrails.py
 │       │   ├── shodan.py
+│       │   ├── urlscan.py
 │       │   ├── virustotal.py
 │       │   └── whois.py
 │       ├── knowledge/
@@ -196,7 +212,8 @@ Returned data includes `iocs` (IPs, domains, URLs, file hashes, CVE IDs, values 
 │       │   ├── iocs.py
 │       │   ├── kev.py
 │       │   ├── lolbas.py
-│       │   └── update_attack.py
+│       │   ├── update_attack.py
+│       │   └── update_maxmind.py
 │       └── mcp/
 │           ├── enrichment_server.py
 │           └── knowledge_server.py
@@ -217,12 +234,26 @@ The current version supports these environment variables:
 - `THREATSYFT_LOLBAS_URL`: source URL used by the explicit LOLBAS update command.
 - `ABUSEIPDB_API_KEY`: API key for `abuseipdb_check_ip`.
 - `GREYNOISE_API_KEY`: API key for `greynoise_ip_context`.
+- `SENTINEL_API_KEY`: API key for `sentinel_ip_lookup`. A `sk_live_` secret key,
+  sent as a bearer token.
+- `CENSYS_API_KEY`: Personal access token for `censys_host_lookup`, sent as a
+  bearer token against the Censys Platform API. This is the newer single-token
+  scheme, not the legacy Search API's separate ID and secret.
 - `VIRUSTOTAL_API_KEY`: API key for VirusTotal IP, domain, URL, and file reports.
 - `SECURITYTRAILS_API_KEY`: API key for `securitytrails_domain_lookup`.
 - `SHODAN_API_KEY`: API key for `shodan_host_lookup`.
-- `IPGEOLOCATION_API_KEY`: API key for `ipgeolocation_lookup`.
+- `MAXMIND_ACCOUNT_ID` / `MAXMIND_LICENSE_KEY`: credentials for
+  `threatsyft-update maxmind`, sent as HTTP basic auth. These are download
+  credentials only; `maxmind_ip_lookup` reads the local database and needs no
+  key at lookup time.
 - `ALIENVAULT_API_KEY`: API key for `alienvault_indicator_lookup`.
 - `GOOGLE_SAFEBROWSING_API_KEY`: API key for `google_safebrowsing_check_url`.
+- `URLSCAN_API_KEY`: optional API key for `urlscan_search`, sent as the
+  `API-Key` header. Search works without one at a lower quota, so this is the
+  only provider key whose absence degrades a source rather than disabling it.
+- `HYBRID_ANALYSIS_API_KEY`: API key for `hybrid_analysis_hash_lookup`, sent as
+  the `api-key` header. Falcon Sandbox also requires a fixed
+  `User-Agent: Falcon Sandbox` header, which the provider always sends.
 - `NVD_API_KEY`: optional API key for the NVD CVE API.
 
 Copy `.env.example` to `.env` for local API key setup. Do not commit `.env`.

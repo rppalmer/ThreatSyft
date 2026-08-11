@@ -216,6 +216,47 @@ def test_actors_are_parsed_with_their_techniques(attack_snapshot) -> None:
     assert "T1059" in actor.technique_ids
 
 
+def test_actors_carry_the_software_they_use(attack_snapshot) -> None:
+    """malware and tool objects were parsed and discarded before software was supported."""
+    knowledge = attack.load_attack_knowledge(FIXTURE_PATH)
+
+    actor = knowledge.actors_by_id["G9001"]
+    assert actor.software_ids == ["S9001", "S9002"]
+
+
+def test_software_keeps_malware_and_tool_distinguishable(attack_snapshot) -> None:
+    """ATT&CK numbers both in one S-space; the caller still needs to tell them apart."""
+    knowledge = attack.load_attack_knowledge(FIXTURE_PATH)
+
+    assert knowledge.software_by_id["S9001"].software_type == "malware"
+    assert knowledge.software_by_id["S9002"].software_type == "tool"
+
+
+def test_actor_lookup_lists_software_as_identity_only(attack_snapshot) -> None:
+    """Software follows the same trimmed shape as techniques; ids stay lookup-able."""
+    data = attack.attack_actor_lookup("G9001")["data"]
+
+    assert data["software_count"] == 2
+    for software in data["software"]:
+        assert set(software) == {"software_id", "name", "software_type", "source_url"}
+
+
+def test_software_lookup_resolves_the_actors_that_use_it(attack_snapshot) -> None:
+    """The actor->software edge is readable from either end."""
+    data = attack.attack_software_lookup("S9001")["data"]
+
+    assert data["name"] == "FixtureRAT"
+    assert data["actor_count"] == 1
+    assert [actor["actor_id"] for actor in data["actors"]] == ["G9001"]
+
+
+def test_software_lookup_rejects_a_malformed_id(attack_snapshot) -> None:
+    response = attack.attack_software_lookup("not-an-id")
+
+    assert response["ok"] is False
+    assert response["error"]["code"] == "invalid_input"
+
+
 def test_actor_aliases_do_not_repeat_the_primary_name(attack_snapshot) -> None:
     actor = attack.load_attack_knowledge(FIXTURE_PATH).actors_by_id["G9001"]
 
