@@ -114,6 +114,18 @@ def maxmind_ip_lookup(ip: str) -> dict[str, Any]:
     if city_record is None:
         data["note"] = "This address is not present in the GeoLite2 City database."
 
+    # Declared by the source that knows its own age. ``enrich`` collects these
+    # into one top-level list without needing to understand any provider's
+    # freshness shape, and without enrichment importing knowledge.freshness.
+    database = data["database"]
+    if database.get("stale") is True:
+        data["staleness_warning"] = (
+            f"The GeoLite2 database is {database['age_days']} days old "
+            f"(stale after {database['stale_after_days']}). "
+            f"Run `{knowledge_update_command('maxmind')}` to refresh it. "
+            "Geolocation drifts as addresses are reassigned."
+        )
+
     return success_response(TOOL_NAME, query, data)
 
 

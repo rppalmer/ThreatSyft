@@ -131,6 +131,7 @@ Returned data includes:
 - `indicator` and `indicator_type`, echoed back so a caller that guessed wrong can self-correct
 - `source_summary`, an `{ok, failed}` count for branching without iterating
 - `sources`, one map keyed by source name where every entry has the same shape whether it succeeded (`{"ok": true, "data": {...}}`) or not (`{"ok": false, "code": ..., "message": ...}`)
+- `warnings`, a list that is empty on a healthy install and carries one line per stale local snapshot, naming its age and the `threatsyft-update` command that fixes it
 
 Source order is fixed and independent of which source responds first.
 
@@ -152,7 +153,9 @@ Collects every local source covering one reference, in a single call. Accepts:
 
 A bare name is ambiguous: it could be a LOLBAS binary, a tactic, or a threat actor or one of its aliases. Rather than guess, `lookup` asks all three. They are local and fast, and the `sources` map shows which one answered.
 
-Returned data includes `reference`, `reference_type`, `source_summary`, and the same `sources` map `enrich` returns.
+Returned data includes `reference`, `reference_type`, `source_summary`, the same `sources` map `enrich` returns, and the same `warnings` list.
+
+Each snapshot-backed source carries a `freshness` block with its age and whether it is past its own staleness threshold. Those thresholds are per source, because CISA adds to KEV most weeks while MITRE ships ATT&CK a few times a year: KEV is stale after 14 days, GeoLite2 after 30, ATT&CK and LOLBAS after 180. A snapshot past its threshold is restated in the top-level `warnings` list, because freshness one level inside a source entry is where a reader stops looking.
 
 Passing an IP, URL or file hash returns `ok: false` naming `enrich` instead.
 

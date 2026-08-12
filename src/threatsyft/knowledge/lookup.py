@@ -29,7 +29,7 @@ from threatsyft.knowledge.attack import (
 )
 from threatsyft.knowledge.attack import attack_search as run_attack_search
 from threatsyft.knowledge.cve import cve_lookup, normalize_cve_id
-from threatsyft.knowledge.freshness import snapshot_freshness
+from threatsyft.knowledge.freshness import snapshot_freshness, staleness_warnings
 from threatsyft.knowledge.kev import kev_lookup
 from threatsyft.knowledge.kev import kev_search as run_kev_search
 from threatsyft.knowledge.lolbas import lolbas_lookup
@@ -165,6 +165,9 @@ def lookup(reference: str) -> dict[str, Any]:
             "reference_type": reference_type,
             "source_summary": summary,
             "sources": source_entries,
+            # Restated at the top because freshness one level down inside an
+            # entry is where a reader stops looking. Empty on a healthy install.
+            "warnings": staleness_warnings(source_entries),
         },
     )
 
@@ -218,6 +221,7 @@ def search(query: str, source: str = "all", limit: int = 10) -> dict[str, Any]:
             "query": query.strip(),
             "source_summary": summary,
             "sources": source_entries,
+            "warnings": staleness_warnings(source_entries),
         },
     )
 

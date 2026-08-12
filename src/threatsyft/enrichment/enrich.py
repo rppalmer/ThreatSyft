@@ -118,8 +118,27 @@ def enrich(indicator: str) -> dict[str, Any]:
             "indicator_type": indicator_type,
             "source_summary": summary,
             "sources": source_entries,
+            # Collected from whichever sources declared one. Snapshot-backed
+            # sources know their own age; this only lifts what they said to
+            # where a reader will see it. Empty on a healthy install.
+            "warnings": _warnings(source_entries),
         },
     )
+
+
+def _warnings(source_entries: dict[str, Any]) -> list[str]:
+    """Lift each source's own staleness warning to the top of the response.
+
+    Kept shape-agnostic on purpose: a source declares ``staleness_warning`` or it
+    does not, so adding another snapshot-backed provider needs no change here.
+    """
+    return [
+        entry["data"]["staleness_warning"]
+        for _, entry in sorted(source_entries.items())
+        if entry.get("ok")
+        and isinstance(entry.get("data"), dict)
+        and isinstance(entry["data"].get("staleness_warning"), str)
+    ]
 
 
 def _wrong_tool_error(indicator: str, query: dict[str, Any]) -> dict[str, Any] | None:

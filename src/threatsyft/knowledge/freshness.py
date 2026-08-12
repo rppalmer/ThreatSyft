@@ -17,7 +17,12 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from threatsyft.config import get_attack_stix_path, get_cisa_kev_path, get_lolbas_path
+from threatsyft.config import (
+    get_attack_stix_path,
+    get_cisa_kev_path,
+    get_lolbas_path,
+    knowledge_update_command,
+)
 
 UTC = ZoneInfo("UTC")
 
@@ -74,6 +79,44 @@ def snapshot_freshness(source: str) -> dict[str, Any] | None:
         "stale_after_days": threshold,
         "snapshot_present": True,
     }
+
+
+def staleness_warnings(source_entries: dict[str, Any]) -> list[str]:
+    """Lift stale snapshots into messages a caller cannot miss.
+
+    ``freshness`` already rides on every snapshot-backed source, but it sits one
+    level inside the entry beside a dozen other fields, which is exactly where a
+    reader stops looking. Age only does its job if the reader notices it, so a
+    snapshot past its own threshold is restated at the top of the response.
+
+    Each warning names the command that fixes it. Thresholds stay per source:
+    CISA adds to KEV most weeks, while ATT&CK ships a few times a year, so one
+    shared number would either miss a stale KEV or warn about ATT&CK constantly.
+    A warning that is always on is one nobody reads.
+
+    A missing snapshot is not warned about here. That already surfaces as a
+    ``not_found`` naming its setup command, and saying it twice adds nothing.
+
+    Keyed by snapshot rather than by source name, because several sources read
+    the same file: a bare-name lookup asks the technique, tactic and actor
+    catalogs, and all three are the one ATT&CK snapshot. Warning per source name
+    would say the same thing three times.
+    """
+    stale: dict[str, dict[str, Any]] = {}
+    for name, entry in sorted(source_entries.items()):
+        freshness = entry.get("freshness") if isinstance(entry, dict) else None
+        if not isinstance(freshness, dict) or freshness.get("stale") is not True:
+            continue
+        snapshot = SOURCE_SNAPSHOTS.get(name)
+        if snapshot is not None:
+            stale.setdefault(snapshot, freshness)
+
+    return [
+        f"The {snapshot} snapshot is {freshness['age_days']} days old "
+        f"(stale after {freshness['stale_after_days']}). "
+        f"Run `{knowledge_update_command(snapshot)}` to refresh it."
+        for snapshot, freshness in sorted(stale.items())
+    ]
 
 
 def _modified_at(path: Path) -> datetime | None:
