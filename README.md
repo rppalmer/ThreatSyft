@@ -155,7 +155,7 @@ A bare name is ambiguous: it could be a LOLBAS binary, a tactic, or a threat act
 
 Returned data includes `reference`, `reference_type`, `source_summary`, the same `sources` map `enrich` returns, and the same `warnings` list.
 
-Each snapshot-backed source carries a `freshness` block with its age and whether it is past its own staleness threshold. Those thresholds are per source, because CISA adds to KEV most weeks while MITRE ships ATT&CK a few times a year: KEV is stale after 14 days, GeoLite2 after 30, ATT&CK and LOLBAS after 180. A snapshot past its threshold is restated in the top-level `warnings` list, because freshness one level inside a source entry is where a reader stops looking.
+Each snapshot-backed source carries a `freshness` block that separates two questions. `as_of` and `age_days` describe the data — when upstream published it, taken from the catalog's own date (CISA's `dateReleased`, the newest `modified` in the ATT&CK bundle, MaxMind's build stamp) rather than from the file's timestamp. `checked_at` and `days_since_checked` describe the updater — when it last got an answer from upstream, including an answer of "nothing changed". `stale` keys off the check, not the content: a quiet upstream is not actionable, an updater that stopped running is. Those thresholds are per source, because CISA adds to KEV most weeks while MITRE ships ATT&CK a few times a year: KEV is stale after 14 days, GeoLite2 after 30, ATT&CK and LOLBAS after 180. A snapshot past its threshold is restated in the top-level `warnings` list, because freshness one level inside a source entry is where a reader stops looking.
 
 Passing an IP, URL or file hash returns `ok: false` naming `enrich` instead.
 

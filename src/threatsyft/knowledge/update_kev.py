@@ -6,13 +6,17 @@ import json
 import sys
 from typing import Any
 
-import httpx
-
-from threatsyft.config import get_cisa_kev_path, get_cisa_kev_url, get_timeout_seconds
+from threatsyft.config import get_cisa_kev_path, get_cisa_kev_url
 from threatsyft.core import error_response, success_response
 from threatsyft.knowledge.snapshot_cache import write_snapshot
+from threatsyft.knowledge.snapshot_fetch import (
+    fetch_snapshot,
+    record_download,
+    unchanged_response,
+)
 
 TOOL_NAME = "kev_snapshot_update"
+LABEL = "CISA KEV"
 
 
 def update_kev_snapshot() -> dict[str, Any]:
@@ -21,36 +25,13 @@ def update_kev_snapshot() -> dict[str, Any]:
     source_url = get_cisa_kev_url()
     query = {"source_url": source_url, "snapshot_path": str(snapshot_path)}
 
-    if not source_url:
-        return error_response(
-            TOOL_NAME,
-            query,
-            "invalid_input",
-            "CISA KEV source URL must not be empty.",
-        )
+    outcome = fetch_snapshot(TOOL_NAME, query, LABEL, source_url, snapshot_path)
+    if outcome.error:
+        return outcome.error
+    if outcome.unchanged:
+        return unchanged_response(TOOL_NAME, query, snapshot_path, {"source_url": source_url})
 
-    try:
-        response = httpx.get(source_url, timeout=get_timeout_seconds())
-    except httpx.TimeoutException:
-        return error_response(TOOL_NAME, query, "timeout", "CISA KEV download timed out.")
-    except httpx.RequestError as exc:
-        return error_response(
-            TOOL_NAME,
-            query,
-            "network_error",
-            "CISA KEV download failed.",
-            {"reason": str(exc)},
-        )
-
-    if response.status_code >= 400:
-        return error_response(
-            TOOL_NAME,
-            query,
-            "upstream_error",
-            f"CISA KEV download failed with HTTP {response.status_code}.",
-            {"status_code": response.status_code},
-        )
-
+    response = outcome.response
     try:
         payload = response.json()
     except ValueError as exc:
@@ -71,6 +52,13 @@ def update_kev_snapshot() -> dict[str, Any]:
         )
 
     write_snapshot(snapshot_path, payload)
+    # CISA stamps the catalog with its own release date, which is the honest
+    # answer to "how old is this data". The file's mtime only says when this
+    # machine wrote it.
+    content_date = payload.get("dateReleased")
+    record_download(
+        snapshot_path, response, content_date if isinstance(content_date, str) else None
+    )
 
     return success_response(
         TOOL_NAME,
@@ -78,6 +66,9 @@ def update_kev_snapshot() -> dict[str, Any]:
         {
             "snapshot_path": str(snapshot_path),
             "source_url": source_url,
+            "downloaded": True,
+            "content_date": content_date,
+            "catalog_version": payload.get("catalogVersion"),
             "vulnerability_count": len(payload["vulnerabilities"]),
         },
     )

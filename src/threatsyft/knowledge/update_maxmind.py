@@ -18,7 +18,6 @@ deprecated and now fails, so there is no fallback to it.
 
 from __future__ import annotations
 
-import contextlib
 import io
 import tarfile
 from typing import Any
@@ -35,6 +34,7 @@ from threatsyft.config import (
 )
 from threatsyft.core import error_response, success_response
 from threatsyft.knowledge.snapshot_cache import write_binary_snapshot
+from threatsyft.snapshot_meta import read_meta, write_meta
 
 TOOL_NAME = "maxmind_snapshot_update"
 LICENSE_KEY_NAME = "MAXMIND_LICENSE_KEY"
@@ -108,6 +108,10 @@ def _update_edition(edition, path, account_id: str, license_key: str) -> dict[st
 
     remote_build = head["response"].headers.get("Last-Modified")
     if remote_build and _local_build(path) == remote_build:
+        # A matching build is still a successful check, so the sidecar is
+        # re-stamped. Without that, a database kept current by daily skipped
+        # downloads would drift toward looking abandoned.
+        write_meta(path, content_date=remote_build, last_modified=remote_build)
         return success_response(
             TOOL_NAME,
             query,
@@ -166,8 +170,7 @@ def _update_edition(edition, path, account_id: str, license_key: str) -> dict[st
 
     write_binary_snapshot(path, database)
     build = response.headers.get("Last-Modified") or remote_build
-    if build:
-        _write_build_marker(path, build)
+    write_meta(path, content_date=build, last_modified=build)
 
     return success_response(
         TOOL_NAME,
@@ -219,28 +222,15 @@ def _extract_database(archive: bytes, edition: str) -> bytes:
     raise ValueError(f"{edition} archive contained no .mmdb database.")
 
 
-def _build_marker_path(path):
-    return path.with_name(f"{path.name}.build")
-
-
 def _local_build(path) -> str | None:
     """Return the published build recorded for the local copy, if any.
 
-    The build date is kept in a sibling marker file rather than inferred from the
-    file's mtime, because mtime records when this machine wrote the file and the
-    comparison needs what MaxMind published. A missing marker just means the
-    next run downloads once and writes it.
+    Read from the sidecar rather than inferred from the file's mtime, because
+    mtime records when this machine wrote the file and the comparison needs what
+    MaxMind published. A missing sidecar just means the next run downloads once
+    and writes one.
     """
     if not path.exists():
         return None
-    try:
-        return _build_marker_path(path).read_text(encoding="utf-8").strip() or None
-    except OSError:
-        return None
-
-
-def _write_build_marker(path, build: str) -> None:
-    # A missing marker costs one redundant download next run, which is not worth
-    # failing an otherwise good update over.
-    with contextlib.suppress(OSError):
-        _build_marker_path(path).write_text(build, encoding="utf-8")
+    recorded = read_meta(path).get("last_modified")
+    return recorded if isinstance(recorded, str) and recorded else None

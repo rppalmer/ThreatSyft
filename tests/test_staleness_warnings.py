@@ -15,6 +15,8 @@ def _fresh(age_days=2, threshold=14):
     return {
         "as_of": "2026-08-09T00:00:00+00:00",
         "age_days": age_days,
+        "checked_at": "2026-08-09T00:00:00+00:00",
+        "days_since_checked": age_days,
         "stale": False,
         "stale_after_days": threshold,
         "snapshot_present": True,
@@ -37,7 +39,8 @@ def test_a_stale_snapshot_names_its_age_and_its_fix() -> None:
     warnings = staleness_warnings({"kev": _entry(_stale(45))})
 
     assert len(warnings) == 1
-    assert "45 days old" in warnings[0]
+    assert "45 days" in warnings[0]
+    assert "not been checked" in warnings[0]
     assert "stale after 14" in warnings[0]
     assert "threatsyft-update kev" in warnings[0]
 
