@@ -1,8 +1,8 @@
 # ThreatSyft
 
-ThreatSyft exposes focused security tools through local MCP servers, so an AI client such as VS Code can request structured security context without getting general-purpose access to the machine. MCP is the only interface; one console command exists to download data snapshots.
+ThreatSyft gives an AI client — VS Code, Cursor, LM Studio — a set of security lookup tools over MCP: enrich an indicator, look up an ATT&CK or CVE reference, pull indicators out of text. MCP is the only interface; one console command downloads the local data.
 
-It does **not** discover, fetch, or summarise threat reports. That belongs to the separate net-razor project. ThreatSyft never fetches a URL you hand it — `extract_iocs` works on text you already have.
+It looks things up, it doesn't load pages. A URL passed to `enrich` is sent to reputation services as text, not visited. `extract_iocs` reads text you paste in. Fetching and summarising articles is the separate net-razor project.
 
 ## What It Does
 
@@ -33,9 +33,9 @@ Six tools across two servers.
 | URL | Google Safe Browsing, VirusTotal, urlscan.io, AlienVault OTX |
 | Hash | VirusTotal, Hybrid Analysis, AlienVault OTX |
 
-Everything supporting the indicator's type is called — there is no way to ask a single vendor, by design. Sources that need no key at all: DNS, RDAP, WHOIS, and MaxMind (which reads a local database).
+Every source for that indicator type is called; there's no option to query just one. DNS, RDAP, WHOIS and MaxMind need no key.
 
-Two providers read only, never act: **urlscan.io** searches existing scans and never submits one, and **Hybrid Analysis** reads existing sandbox reports and never detonates a sample. Submitting would both act against the target and publish the fact that you are investigating it.
+urlscan.io and Hybrid Analysis are read-only here: urlscan searches existing scans rather than submitting a new one, and Hybrid Analysis reads existing sandbox reports rather than detonating anything.
 
 ### Response shape
 
@@ -47,9 +47,9 @@ Every tool returns the same envelope:
 
 Errors use the same shape with `data: null` and an `error` object carrying `code`, `message`, and `details`.
 
-`ok: false` means *the caller must change something* — bad input, or a reference belonging to another tool. Every source failing is still `ok: true` with the failures attributed, because retrying will not fix an absence of data.
+`ok: false` means the input needs changing — bad indicator, or a reference belonging to another tool. If every source fails the call is still `ok: true`, with each failure listed.
 
-`ARCHITECTURE.md` explains the contract and the reasoning behind it.
+See `ARCHITECTURE.md` for the full contract.
 
 ## Install
 
@@ -67,7 +67,7 @@ Then download the local data:
 
 ### API keys
 
-Every key is optional. A missing key disables that one source and is reported per source; the rest of the call still returns. Run `enrichment_status()` to see what is configured without printing secrets.
+Every key is optional. A missing key disables that one source; the rest of the call still returns. Run `enrichment_status()` to see what's configured.
 
 | Variable | Used by |
 | --- | --- |
@@ -129,7 +129,7 @@ The kev snapshot has not been checked against upstream for 21 days
 (stale after 14). Run `threatsyft-update kev` to refresh it.
 ```
 
-On a current install that list is empty, so anything appearing there needs doing.
+The list is empty when everything is current.
 
 ### Refreshing
 
@@ -139,7 +139,7 @@ On a current install that list is empty, so anything appearing there needs doing
 
 Or one source at a time: `attack`, `kev`, `lolbas`, `maxmind`.
 
-Re-running is cheap. Each source is asked whether anything changed before anything downloads, so an unchanged source costs one round trip and rewrites no files — a full `all` run with everything current takes under a second. Exit code is `0` on success, `1` on failure, and a structured JSON result prints either way.
+Re-running is cheap: each source is asked whether anything changed before anything downloads, so an unchanged source costs one round trip and rewrites no files. A full `all` run with everything current takes under a second. Exit code `0` on success, `1` on failure, with a JSON result either way.
 
 ### When each source goes stale
 
@@ -150,9 +150,9 @@ Re-running is cheap. Each source is asked whether anything changed before anythi
 | ATT&CK | 180 days | A few releases a year |
 | LOLBAS | 180 days | Slow-moving community catalog |
 
-The clock is on **checking**, not on the data. A source upstream has not touched in months will not warn as long as you have asked recently; what warns is nobody asking.
+These count time since the last check, not the age of the data. If upstream hasn't published in months that's fine and nothing warns; the warning means nothing has checked recently.
 
-Every snapshot-backed source also carries a `freshness` block reporting both: `as_of` and `age_days` for when upstream published the data, `checked_at` and `days_since_checked` for when the updater last got an answer.
+Each snapshot-backed source also carries a `freshness` block with both: `as_of` and `age_days` for when upstream published, `checked_at` and `days_since_checked` for when the updater last got an answer.
 
 ## Tool Reference
 
@@ -160,9 +160,9 @@ Every snapshot-backed source also carries a `freshness` block reporting both: `a
 
 Classifies one IP, domain, URL, or MD5/SHA1/SHA256 hash and collects context from every source supporting that type.
 
-This is collection, not judgement. It returns **no** verdict and no confidence score, per source or overall. Each provider's own fields come back under that provider's own names — `last_analysis_stats`, `abuse_confidence_score`, `classification` — and nothing reduces them. Interpretation is the calling agent's job.
+It returns no verdict and no score. Each provider's fields come back under that provider's own names — `last_analysis_stats`, `abuse_confidence_score`, `classification` — unchanged.
 
-Returns `indicator`, `indicator_type`, a `source_summary` of `{ok, failed}` counts, a `sources` map keyed by source name where every entry has the same shape whether it succeeded or not, and `warnings`. Source order is fixed regardless of which source responds first.
+Returns `indicator`, `indicator_type`, a `source_summary` of `{ok, failed}` counts, a `sources` map where every entry has the same shape whether it succeeded or not, and `warnings`. Source order is fixed.
 
 Passing a CVE or ATT&CK ID returns `ok: false` naming `lookup` instead.
 
@@ -174,17 +174,17 @@ Resolves one reference across every local source covering it. Accepts:
 - an ATT&CK technique (`T1059`, `T1059.001`), tactic (`TA0002`), mitigation (`M1038`), group (`G0016`), or software (`S0002`) ID
 - a bare name such as `Certutil.exe`, `execution`, `APT29`, or `Cozy Bear`
 
-A bare name is ambiguous — it could be a LOLBAS binary, a tactic, or a threat actor alias — so `lookup` asks all three rather than guessing. They are local and fast, and the `sources` map shows which answered.
+A bare name could be a LOLBAS binary, a tactic, or a threat actor alias, so `lookup` checks all three and the `sources` map shows which answered.
 
-Group records list the techniques and the malware and tooling that group is recorded using; software records resolve the reverse. Returns the same envelope shape as `enrich`.
+Group records list that group's techniques and the malware and tooling it uses; software records resolve the reverse. Same response shape as `enrich`.
 
 Passing an IP, URL, or hash returns `ok: false` naming `enrich` instead.
 
 ### `search(query, source="all", limit=10)`
 
-Keyword search across ATT&CK techniques, ATT&CK threat actors, KEV, and LOLBAS, grouped by source and never merged into one ranked list — the catalogs share almost no fields and their scores are on unrelated scales, so a combined ranking would invent precision that does not exist.
+Keyword search across ATT&CK techniques, ATT&CK threat actors, KEV, and LOLBAS. Results stay grouped by source rather than merged into one ranked list.
 
-`limit` applies **per source**, so `source="all"` does not quietly return three times the rows you asked for. Each source reports `match_count` alongside `returned`, so you can tell 10-of-11 from 10-of-400.
+`limit` applies **per source**, so `source="all"` returns up to `limit` rows from each. Each source reports `match_count` alongside `returned`, so you can tell 10-of-11 from 10-of-400.
 
 Narrow with `source=` set to `attack_technique`, `attack_actor`, `kev`, or `lolbas` — the same names `lookup` uses in its `sources` map.
 
@@ -192,13 +192,13 @@ Narrow with `source=` set to `attack_technique`, `attack_actor`, `kev`, or `lolb
 
 Extracts typed IOC candidates from text. No network access. Handles defanged forms such as `hxxp://example[.]com`.
 
-`iocs` carries values only, so a caller can feed them straight to `enrich`. Surrounding source text stays under `untrusted_context`, keyed by IOC value, never merged into a server-authored field — a caller can drop that key entirely without losing an indicator.
+`iocs` holds values only, so you can feed them straight to `enrich`. The surrounding source text sits separately under `untrusted_context`, keyed by IOC value; drop that key and you still have every indicator.
 
-`ioc_counts` is how many distinct indicators the text contains, counted before the per-type cap; `returned_counts` is how many came back. They differ exactly for the types listed in `truncated`, so a long report that overflows the cap says so rather than silently losing indicators.
+`ioc_counts` is how many distinct indicators the text contains, before the per-type cap. `returned_counts` is how many came back. Types where they differ are listed in `truncated`.
 
 ### `enrichment_status()` and `knowledge_status()`
 
-Local-only readiness checks that call no providers and print no secret values. `enrichment_status` reports per-provider key presence and which indicator types each is called for, derived from the dispatch table so it cannot claim coverage that no longer exists. `knowledge_status` reports snapshot paths, availability, counts, ages, and the setup command for anything missing.
+Readiness checks. Both are local, call no providers, and print no secret values. `enrichment_status` reports which keys are present and which indicator types each provider is called for. `knowledge_status` reports snapshot paths, availability, counts, ages, and the setup command for anything missing.
 
 ## Example Agent Prompts
 
