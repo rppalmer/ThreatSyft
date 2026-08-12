@@ -273,6 +273,69 @@ The optional settings in `.env.example` are commented out on purpose. Each line 
 
 ThreatSyft loads `.env` from the working directory if there is one, then from `~/.threatsyft/.env`. The home location is the reliable one for MCP hosts, which start the server from their own working directory.
 
+## Keeping Snapshots Current
+
+Four data sets live on disk: MITRE ATT&CK, the CISA KEV catalog, LOLBAS, and the
+MaxMind GeoLite2 databases. Nothing refreshes them automatically. You run one
+command when something tells you to.
+
+### The tools tell you when
+
+You do not have to track this yourself. When a snapshot goes too long without
+being checked against upstream, `lookup`, `search` and `enrich` put a line at the
+top of the response, in a `warnings` list, naming the source and the exact
+command that fixes it:
+
+```
+The kev snapshot has not been checked against upstream for 21 days
+(stale after 14). Run `threatsyft-update kev` to refresh it.
+```
+
+On a current install that list is empty, so a warning appearing means something
+genuinely needs doing.
+
+### Refreshing
+
+One source at a time:
+
+```bash
+.venv/bin/threatsyft-update attack
+.venv/bin/threatsyft-update kev
+.venv/bin/threatsyft-update lolbas
+.venv/bin/threatsyft-update maxmind
+```
+
+Or everything in one pass, which is the usual answer:
+
+```bash
+.venv/bin/threatsyft-update all
+```
+
+Re-running is cheap. Each source is asked whether anything changed before
+anything is downloaded, and an unchanged source costs one round trip and rewrites
+no files. A full `all` run with everything already current takes well under a
+second.
+
+`maxmind` needs `MAXMIND_ACCOUNT_ID` and `MAXMIND_LICENSE_KEY` configured; the
+other three need no credentials.
+
+### When each source goes stale
+
+The thresholds differ because the sources move at different speeds. CISA adds to
+KEV most weeks, while MITRE ships ATT&CK a few times a year, so one shared number
+would either miss a stale KEV or complain about ATT&CK permanently.
+
+| Source | Warns after | Why |
+| --- | --- | --- |
+| KEV | 14 days | CISA adds entries most weeks |
+| GeoLite2 | 30 days | MaxMind rebuilds twice a week |
+| ATT&CK | 180 days | A few releases a year |
+| LOLBAS | 180 days | Slow-moving community catalog |
+
+The clock is on *checking*, not on the data. A source that upstream has not
+touched in months is not a problem and will not warn, as long as you have asked
+recently. What warns is nobody asking.
+
 ## Host Compatibility
 
 ThreatSyft works with MCP hosts that can launch local stdio servers. The server code is host-generic; the only host-specific part is the configuration file format.
@@ -363,15 +426,7 @@ Check formatting:
 .venv/bin/ruff format --check .
 ```
 
-Refresh a local knowledge snapshot:
-
-```bash
-.venv/bin/threatsyft-update attack
-.venv/bin/threatsyft-update kev
-.venv/bin/threatsyft-update lolbas
-```
-
-Refresh all of them in sequence:
+Refresh the local snapshots — see [Keeping Snapshots Current](#keeping-snapshots-current) for what warns you and when:
 
 ```bash
 .venv/bin/threatsyft-update all
