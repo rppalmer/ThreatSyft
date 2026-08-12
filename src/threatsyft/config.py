@@ -28,7 +28,11 @@ DEFAULT_GOOGLE_SAFEBROWSING_BASE_URL = "https://safebrowsing.googleapis.com"
 DEFAULT_SENTINEL_BASE_URL = "https://maskbreak.com/v1"
 DEFAULT_CENSYS_BASE_URL = "https://api.platform.censys.io/v3"
 DEFAULT_URLSCAN_BASE_URL = "https://urlscan.io/api/v1"
-DEFAULT_HYBRID_ANALYSIS_BASE_URL = "https://www.hybrid-analysis.com/api/v2"
+# No "www.": that host answers 301 to this one, and the API key travels in a
+# custom header, which httpx does not strip when following a cross-host redirect
+# the way it strips `auth=`. Chasing the redirect would hand the key to whatever
+# the Location names, so the canonical host is used directly instead.
+DEFAULT_HYBRID_ANALYSIS_BASE_URL = "https://hybrid-analysis.com/api/v2"
 # The current download host. The older
 # download.maxmind.com/app/geoip_download?license_key=... endpoint is deprecated
 # and now fails; this one takes the account ID and license key as basic auth.

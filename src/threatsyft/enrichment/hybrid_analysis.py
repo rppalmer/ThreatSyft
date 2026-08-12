@@ -8,7 +8,19 @@ The part worth the integration is ``mitre_attcks``. Falcon Sandbox maps observed
 behaviour onto ATT&CK technique IDs, and this project already resolves technique
 IDs locally, so the technique IDs collected here hand straight to ``lookup``
 with no further network call. That is why the distinct IDs are lifted to the top
-of the response instead of being left buried per report.
+of the response instead of being left buried in a report.
+
+Two requests, because the API splits the answer in half. ``/search/hash`` takes
+any hash type and returns one lean stub per sandbox environment — an id, the
+environment, and whether the run succeeded — and nothing about behaviour. The
+behaviour, and ``mitre_attcks`` with it, lives on ``/report/{id}/summary``. So
+this resolves the hash to a run that actually completed and then fetches that
+one run. A sample can have hundreds of stubs (EICAR has over six hundred), so
+picking one and fetching it is also what keeps the response bounded.
+
+The second request is best-effort: if it fails, the environment list from the
+first still comes back, because knowing a sample was detonated ten times and
+called malicious is worth more than an error.
 
 Reads existing reports only. The submission endpoints detonate a sample and are
 not reachable from here, for the same reason urlscan submission is not: an
@@ -33,7 +45,7 @@ from threatsyft.config import (
 from threatsyft.enrichment.http import (
     auth_or_rate_error,
     guarded_get,
-    parse_json_array,
+    parse_json_object,
 )
 from threatsyft.enrichment.models import (
     InputValidationError,
@@ -51,21 +63,33 @@ PROVIDER = "Hybrid Analysis"
 # from the package name.
 USER_AGENT = "Falcon Sandbox"
 
-# One report per sandbox environment the sample was run in. A handful is normal;
-# the bound is here so a heavily-analysed sample cannot flood the response.
-MAX_REPORTS = 10
+# A widely-submitted sample has hundreds of environment stubs. They are small,
+# but they are also repetitive, so a slice plus the true total is the useful
+# form. EICAR returns over 600.
+MAX_ENVIRONMENTS = 10
 
-# Network observables can run to hundreds per report. Bounded, with the report's
-# own total beside them, so a caller can see it is looking at a slice.
+# Network observables can run to hundreds on a real sample. Bounded, with the
+# report's own total beside them, so a caller can see it is looking at a slice.
 MAX_NETWORK_ENTRIES = 25
 
-REPORT_FIELDS = (
+# The state Falcon Sandbox gives a run that completed. Anything else (ERROR,
+# IN_QUEUE, IN_PROGRESS) has no behaviour to report, so it is not worth
+# spending the second request on.
+COMPLETED_STATE = "SUCCESS"
+
+ENVIRONMENT_FIELDS = (
+    "environment_id",
+    "environment_description",
+    "state",
+    "verdict",
+    "error_type",
+)
+
+DETAIL_FIELDS = (
     "job_id",
     "environment_id",
     "environment_description",
-    "submit_name",
-    "type",
-    "size",
+    "state",
     "verdict",
     "threat_score",
     "threat_level",
@@ -73,10 +97,21 @@ REPORT_FIELDS = (
     "vx_family",
     "classification_tags",
     "tags",
+    "type",
+    "type_short",
+    "size",
+    "md5",
+    "sha256",
+    "imphash",
+    "ssdeep",
     "total_processes",
     "total_network_connections",
     "total_signatures",
 )
+
+# Lists whose length is the useful part; the contents are bulk that belongs to
+# the full report rather than to a triage answer.
+COUNTED_LISTS = ("processes", "signatures", "extracted_files")
 
 # Trimmed to what identifies the technique. The identifier lists behind each
 # entry are evidence for the mapping, not the mapping, and they are the bulk of
@@ -103,14 +138,65 @@ def hybrid_analysis_hash_lookup(file_hash: str) -> dict[str, Any]:
             f"{API_KEY_NAME} is not configured.",
         )
 
-    url = f"{get_hybrid_analysis_base_url()}/search/hash"
-    headers = {
-        "Accept": "application/json",
-        "User-Agent": USER_AGENT,
-        "api-key": api_key,
-    }
-    params = {"hash": normalized_hash}
+    headers = _headers(api_key)
+    search = _get(
+        query,
+        f"{get_hybrid_analysis_base_url()}/search/hash",
+        headers,
+        params={"hash": normalized_hash},
+    )
+    if search.get("error"):
+        return search["error"]
 
+    payload = search["payload"]
+    stubs = payload.get("reports")
+    stubs = stubs if isinstance(stubs, list) else []
+    sha256s = [value for value in (payload.get("sha256s") or []) if isinstance(value, str)]
+
+    detail, detail_error = _detail(query, headers, stubs)
+
+    data: dict[str, Any] = {
+        "hash": normalized_hash,
+        "sha256": sha256s[0] if sha256s else None,
+        # Every environment the sample was run in, which is the count of runs
+        # rather than the count of distinct results.
+        "report_count": len(stubs),
+        "completed_report_count": sum(1 for stub in stubs if _state(stub) == COMPLETED_STATE),
+        "environments": [_environment(stub) for stub in stubs[:MAX_ENVIRONMENTS]],
+        "report": detail,
+        "attack_technique_ids": _distinct_attack_ids(detail),
+        "source": "hybrid_analysis",
+        "source_url": "https://www.hybrid-analysis.com/",
+        "note": (
+            "Existing sandbox reports only; nothing was submitted for detonation. "
+            "Hybrid Analysis covers samples someone submitted to it, so no report "
+            "is common and is not evidence the file is safe."
+        ),
+    }
+    if detail_error:
+        # Reported rather than raised: the environment list is still worth
+        # returning, and a caller should see which half was unavailable.
+        data["report_unavailable"] = detail_error
+
+    return success_response(TOOL_NAME, query, data)
+
+
+def _headers(api_key: str) -> dict[str, str]:
+    return {"Accept": "application/json", "User-Agent": USER_AGENT, "api-key": api_key}
+
+
+def _get(
+    query: dict[str, Any],
+    url: str,
+    headers: dict[str, str],
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run one request and return a parsed object or a ready error envelope.
+
+    Redirects are deliberately not followed. The API key travels in a custom
+    header, and httpx strips ``auth=`` across hosts but not custom headers, so
+    chasing a redirect could hand the key to whatever the Location names.
+    """
     result = guarded_get(
         TOOL_NAME,
         query,
@@ -118,55 +204,75 @@ def hybrid_analysis_hash_lookup(file_hash: str) -> dict[str, Any]:
         lambda: httpx.get(url, params=params, headers=headers, timeout=get_timeout_seconds()),
     )
     if result.error:
-        return result.error
-    response = result.response
+        return {"error": result.error}
 
-    auth_error = auth_or_rate_error(TOOL_NAME, query, PROVIDER, response)
+    auth_error = auth_or_rate_error(TOOL_NAME, query, PROVIDER, result.response)
     if auth_error:
-        return auth_error
+        return {"error": auth_error}
 
-    # An unknown hash comes back as 404 rather than an empty array. That is a
-    # normal outcome for a provider that only holds what was submitted to it, so
-    # it becomes zero reports rather than a not_found error.
-    if response.status_code == 404:
-        found = []
-    else:
-        parsed = parse_json_array(TOOL_NAME, query, PROVIDER, response)
-        if parsed.error:
-            return parsed.error
-        found = parsed.payload
+    # An unknown hash is a 404 rather than an empty body. That is a normal
+    # outcome for a provider holding only what was submitted to it.
+    if result.response.status_code == 404:
+        return {"payload": {}}
 
-    reports = [_report(entry) for entry in found[:MAX_REPORTS]]
-    return success_response(
-        TOOL_NAME,
-        query,
-        {
-            "hash": normalized_hash,
-            "report_count": len(found),
-            "reports": reports,
-            # Lifted out of the per-report mappings and de-duplicated because
-            # this is the field that feeds `lookup`, and a caller should not
-            # have to walk every environment's report to assemble it.
-            "attack_technique_ids": _distinct_attack_ids(reports),
-            "source": "hybrid_analysis",
-            "source_url": "https://www.hybrid-analysis.com/",
-            "note": (
-                "Existing sandbox reports only; nothing was submitted for detonation. "
-                "Hybrid Analysis covers samples someone submitted to it, so no report "
-                "is common and is not evidence the file is safe."
-            ),
-        },
+    parsed = parse_json_object(TOOL_NAME, query, PROVIDER, result.response)
+    if parsed.error:
+        return {"error": parsed.error}
+    return {"payload": parsed.payload}
+
+
+def _detail(
+    query: dict[str, Any],
+    headers: dict[str, str],
+    stubs: list[Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Fetch the one completed run that carries behaviour and ATT&CK mappings."""
+    completed = next(
+        (stub for stub in stubs if isinstance(stub, dict) and _state(stub) == COMPLETED_STATE),
+        None,
     )
+    if completed is None:
+        if stubs:
+            return None, "No sandbox run completed, so no behaviour detail is available."
+        return None, None
+
+    job_id = completed.get("id") or completed.get("job_id")
+    if not isinstance(job_id, str):
+        return None, "A completed run carried no report id."
+
+    url = f"{get_hybrid_analysis_base_url()}/report/{job_id}/summary"
+    result = _get(query, url, headers)
+    if result.get("error"):
+        return (
+            None,
+            f"The behaviour report could not be fetched: {result['error']['error']['code']}",
+        )
+
+    return _report(result["payload"]), None
 
 
-def _report(entry: Any) -> dict[str, Any]:
-    """Reduce one detonation report to its verdict fields and behaviour summary."""
-    if not isinstance(entry, dict):
+def _state(stub: Any) -> str | None:
+    return stub.get("state") if isinstance(stub, dict) else None
+
+
+def _environment(stub: Any) -> dict[str, Any]:
+    """One sandbox run reduced to which environment it was and how it ended."""
+    if not isinstance(stub, dict):
         return {}
+    environment = {field: stub[field] for field in ENVIRONMENT_FIELDS if field in stub}
+    environment["report_id"] = stub.get("id") or stub.get("job_id")
+    return {key: value for key, value in environment.items() if value is not None}
 
-    report = {field: entry[field] for field in REPORT_FIELDS if field in entry}
-    report["mitre_attcks"] = _attack_mappings(entry.get("mitre_attcks"))
-    report["network"] = _network(entry)
+
+def _report(payload: dict[str, Any]) -> dict[str, Any]:
+    """Reduce one detonation report to its verdict fields and behaviour summary."""
+    report = {field: payload[field] for field in DETAIL_FIELDS if field in payload}
+    for field in COUNTED_LISTS:
+        value = payload.get(field)
+        if isinstance(value, list) and value:
+            report[f"{field}_count"] = len(value)
+    report["mitre_attcks"] = _attack_mappings(payload.get("mitre_attcks"))
+    report["network"] = _network(payload)
     return {key: value for key, value in report.items() if value not in (None, {}, [])}
 
 
@@ -181,11 +287,11 @@ def _attack_mappings(value: Any) -> list[dict[str, Any]]:
     return [mapping for mapping in mappings if mapping]
 
 
-def _network(entry: dict[str, Any]) -> dict[str, Any]:
+def _network(payload: dict[str, Any]) -> dict[str, Any]:
     """Bounded network observables, each beside its own untruncated count."""
     network: dict[str, Any] = {}
     for field in ("domains", "hosts", "compromised_hosts"):
-        values = entry.get(field)
+        values = payload.get(field)
         if not isinstance(values, list) or not values:
             continue
         network[field] = values[:MAX_NETWORK_ENTRIES]
@@ -193,11 +299,12 @@ def _network(entry: dict[str, Any]) -> dict[str, Any]:
     return network
 
 
-def _distinct_attack_ids(reports: list[dict[str, Any]]) -> list[str]:
-    """Every ATT&CK technique ID across all reports, de-duplicated and sorted."""
+def _distinct_attack_ids(report: dict[str, Any] | None) -> list[str]:
+    """Every ATT&CK technique ID in the report, de-duplicated and sorted."""
+    if not report:
+        return []
     ids = {
         mapping["attck_id"]
-        for report in reports
         for mapping in report.get("mitre_attcks", [])
         if isinstance(mapping.get("attck_id"), str)
     }
