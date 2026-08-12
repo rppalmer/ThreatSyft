@@ -16,6 +16,7 @@ EXPECTED_DISPATCH = {
         "shodan",
         "censys",
         "maxmind",
+        "mnemonic",
         "alienvault",
         "rdap",
         "whois",

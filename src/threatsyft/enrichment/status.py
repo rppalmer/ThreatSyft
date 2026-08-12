@@ -17,6 +17,7 @@ KEYLESS_SOURCES = {
     "dns": "DNS records for a domain.",
     "rdap": "RDAP registration data for a domain or IP.",
     "whois": "WHOIS registration data for a domain or IP.",
+    "mnemonic": "Passive DNS: names seen resolving to an IP, with first and last seen.",
     # Keyless at lookup time, which is what this map is about. Downloading the
     # database does need MaxMind credentials, and that is an update-time
     # concern reported by the update command rather than a provider key.

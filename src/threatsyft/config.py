@@ -37,6 +37,7 @@ DEFAULT_HYBRID_ANALYSIS_BASE_URL = "https://hybrid-analysis.com/api/v2"
 # download.maxmind.com/app/geoip_download?license_key=... endpoint is deprecated
 # and now fails; this one takes the account ID and license key as basic auth.
 DEFAULT_MAXMIND_BASE_URL = "https://download.maxmind.com/geoip/databases"
+DEFAULT_MNEMONIC_BASE_URL = "https://api.mnemonic.no/pdns/v3"
 
 
 def _load_environment() -> None:
@@ -234,6 +235,11 @@ def get_maxmind_asn_path() -> Path:
 def get_maxmind_account_id() -> str | None:
     """Return the MaxMind account ID used as the basic-auth username."""
     return get_api_key("MAXMIND_ACCOUNT_ID")
+
+
+def get_mnemonic_base_url() -> str:
+    """Return the mnemonic passive DNS API base URL."""
+    return _setting("THREATSYFT_MNEMONIC_BASE_URL", DEFAULT_MNEMONIC_BASE_URL).rstrip("/")
 
 
 def knowledge_update_command(source: str) -> str:

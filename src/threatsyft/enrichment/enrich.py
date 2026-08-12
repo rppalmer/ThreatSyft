@@ -20,6 +20,7 @@ from threatsyft.enrichment.dns import dns_lookup
 from threatsyft.enrichment.greynoise import greynoise_ip_context
 from threatsyft.enrichment.hybrid_analysis import hybrid_analysis_hash_lookup
 from threatsyft.enrichment.maxmind import maxmind_ip_lookup
+from threatsyft.enrichment.mnemonic import mnemonic_pdns_lookup
 from threatsyft.enrichment.models import (
     InputValidationError,
     classify_indicator,
@@ -58,6 +59,7 @@ DISPATCH: dict[str, tuple[SourceFunction, ...]] = {
         ("shodan", shodan_host_lookup),
         ("censys", censys_host_lookup),
         ("maxmind", maxmind_ip_lookup),
+        ("mnemonic", mnemonic_pdns_lookup),
         ("alienvault", alienvault_indicator_lookup),
         ("rdap", rdap_lookup),
         ("whois", whois_lookup),

@@ -28,12 +28,14 @@ Six tools across two servers.
 
 | Indicator | Sources |
 | --- | --- |
-| IP | AbuseIPDB, GreyNoise, Sentinel, VirusTotal, Shodan, Censys, MaxMind, AlienVault OTX, RDAP, WHOIS |
+| IP | AbuseIPDB, GreyNoise, Sentinel, VirusTotal, Shodan, Censys, MaxMind, mnemonic passive DNS, AlienVault OTX, RDAP, WHOIS |
 | Domain | DNS, RDAP, WHOIS, VirusTotal, SecurityTrails, AlienVault OTX |
 | URL | Google Safe Browsing, VirusTotal, urlscan.io, AlienVault OTX |
 | Hash | VirusTotal, Hybrid Analysis, AlienVault OTX |
 
-Every source for that indicator type is called; there's no option to query just one. DNS, RDAP, WHOIS and MaxMind need no key.
+Every source for that indicator type is called; there's no option to query just one. DNS, RDAP, WHOIS, MaxMind and mnemonic need no key.
+
+mnemonic answers what else has been hosted at an address and when — names seen resolving to it, with first and last observed dates. Its results are public passive DNS, capped at 1000 matches, so a count sitting at the cap is a floor rather than a total.
 
 urlscan.io and Hybrid Analysis are read-only here: urlscan searches existing scans rather than submitting a new one, and Hybrid Analysis reads existing sandbox reports rather than detonating anything.
 
