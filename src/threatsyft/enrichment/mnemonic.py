@@ -42,8 +42,25 @@ PROVIDER = "mnemonic passive DNS"
 # hosting or dedicated, without turning one source into the whole response.
 MAX_RECORDS = 50
 
+# Ask for the whole page and pick the newest rows here, rather than asking for
+# fifty and hoping they are the right fifty.
+#
+# mnemonic returns rows in roughly newest-first order but not exactly: measured
+# across four addresses, the first N returned matched the true newest N at 50 and
+# 200, and missed by one to two rows at 10 and 100, which is the signature of a
+# sort key coarser than the millisecond timestamps. A cut landing inside a tied
+# group takes an arbitrary part of it. `sortBy` and `sortDirection` are accepted
+# and silently ignored, so there is no server-side fix.
+#
+# Fetching the full page costs nothing worth saving: 1000 rows came back in 0.86s
+# against 0.93s for 50, the difference being ~300 KB of transfer that is dropped
+# after sorting. The response itself is unchanged.
+FETCH_LIMIT = 1000
+
 # The value `count` stops at, so a response sitting exactly here is a floor
-# rather than a total.
+# rather than a total. It is also the largest page the API will serve: 2000 is
+# refused with a 412, and an offset of 1000 or more returns nothing, so rows
+# beyond the first thousand cannot be reached at all on the open tier.
 COUNT_CAP = 1000
 
 
@@ -65,7 +82,7 @@ def mnemonic_pdns_lookup(ip: str) -> dict[str, Any]:
         PROVIDER,
         lambda: httpx.get(
             url,
-            params={"limit": MAX_RECORDS},
+            params={"limit": FETCH_LIMIT},
             headers={"Accept": "application/json"},
             timeout=get_timeout_seconds(),
         ),
@@ -85,12 +102,13 @@ def mnemonic_pdns_lookup(ip: str) -> dict[str, Any]:
 
     rows = payload.get("data")
     rows = rows if isinstance(rows, list) else []
-    records = [_record(row) for row in rows[:MAX_RECORDS]]
+    records = [_record(row) for row in rows]
     records = [record for record in records if record]
-    # Most recently observed first, so the rows kept are the ones a triage
-    # question is about. Only orders what this page returned; when `count` is at
-    # the cap there are older names that were never sent.
+    # Sort the whole page, then keep the newest slice of it. Sorting after
+    # truncating would only order an arbitrary fifty rather than select the
+    # newest fifty. A record with no date sorts last, where an unknown belongs.
     records.sort(key=lambda record: record.get("last_seen") or "", reverse=True)
+    records = records[:MAX_RECORDS]
 
     count = payload.get("count")
     return success_response(

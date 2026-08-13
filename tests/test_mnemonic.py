@@ -113,8 +113,41 @@ def test_the_page_limit_is_requested(monkeypatch) -> None:
 
     mnemonic.mnemonic_pdns_lookup("93.184.216.34")
 
-    assert captured["params"] == {"limit": mnemonic.MAX_RECORDS}
+    assert captured["params"] == {"limit": mnemonic.FETCH_LIMIT}
     assert captured["url"].endswith("/93.184.216.34")
+
+
+def test_the_newest_are_kept_when_the_page_arrives_out_of_order(monkeypatch) -> None:
+    """The API sorts only roughly by date, so the newest must be chosen here.
+
+    Sorting after truncating would keep an arbitrary slice; this pins that the
+    oldest rows are dropped even when they arrive first.
+    """
+    old = [
+        {**ROW, "query": f"old{index}.example", "lastUpdatedTimestamp": 1_000_000_000_000 + index}
+        for index in range(mnemonic.MAX_RECORDS)
+    ]
+    new = [
+        {**ROW, "query": f"new{index}.example", "lastUpdatedTimestamp": 1_800_000_000_000 + index}
+        for index in range(mnemonic.MAX_RECORDS)
+    ]
+    # Oldest first, which is the order that would defeat a truncate-then-sort.
+    monkeypatch.setattr(mnemonic.httpx, "get", _respond(200, {"data": old + new, "count": 100}))
+
+    records = mnemonic.mnemonic_pdns_lookup("93.184.216.34")["data"]["records"]
+
+    assert len(records) == mnemonic.MAX_RECORDS
+    assert all(record["domain"].startswith("new") for record in records)
+
+
+def test_a_record_without_a_date_sorts_last(monkeypatch) -> None:
+    dated = {**ROW, "query": "dated.example", "lastUpdatedTimestamp": 1_800_000_000_000}
+    undated = {**ROW, "query": "undated.example", "lastUpdatedTimestamp": 0}
+    monkeypatch.setattr(mnemonic.httpx, "get", _respond(200, {"data": [undated, dated]}))
+
+    records = mnemonic.mnemonic_pdns_lookup("93.184.216.34")["data"]["records"]
+
+    assert [record["domain"] for record in records] == ["dated.example", "undated.example"]
 
 
 def test_an_address_with_no_history_is_not_an_error(monkeypatch) -> None:
